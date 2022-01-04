@@ -11,7 +11,8 @@ namespace Xc.Loader.Tests
 {
     public class AssemblyContextTests
     {
-        private string filePath = @"..\..\..\..\TestAssembly\bin\Debug\net6.0\zTestAssembly.dll";
+        private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\Debug\net6.0\zTestAssembly.dll";
+        private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\Debug\net6.0\zTestDependentAssembly.dll";
 
         [Fact()]
         public void VerifyPath_Test()
@@ -26,11 +27,10 @@ namespace Xc.Loader.Tests
         [Fact()]
         public void LoadAssembly_Test()
         {
-            var expectedPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filePath));
-            using (var context = new AssemblyContext(filePath))
-            {
-                Assert.Equal(expectedPath, context.FilePath);
-            }            
+            var expectedPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, simpleDllPath));
+            var context = new AssemblyContext(simpleDllPath);
+            
+            Assert.Equal(expectedPath, context.FilePath);       
         }
 
 
@@ -39,7 +39,7 @@ namespace Xc.Loader.Tests
         {
             var actual = String.Empty;
 
-            using (var context = new AssemblyContext(filePath))
+            using (var context = new AssemblyContext(simpleDllPath))
             {
                 IClass1? class1 = context.GetInstance("Class1") as IClass1;
                 actual = class1?.Stuff("input text here") ?? String.Empty;
@@ -48,6 +48,66 @@ namespace Xc.Loader.Tests
 
             GC.Collect();
             GC.WaitForPendingFinalizers();
+
+            Assert.Equal("input text here output", actual);
+        }
+
+        private string UseFactory(string path)
+        {
+            using (var context = AssemblyContext.LoadFromPath(path))
+            {
+                IClass1? class1 = context.GetInstance("Class1") as IClass1;
+                return class1?.Stuff("input text here") ?? String.Empty;
+            }
+        }
+
+        [Fact()]
+        public void UsingFactory_FromPath_Unloads()
+        {
+            var actual = UseFactory(simpleDllPath);
+            
+            // collect to demonstrate unload
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            Assert.Equal("input text here output", actual);
+        }
+
+        public string DoManual(string aPath)
+        {
+            var context = new System.Runtime.Loader.AssemblyLoadContext(null, true);
+            var assembly = context.LoadFromAssemblyPath(aPath);
+            var location = assembly.Location;
+
+            var classType = assembly.GetTypes().FirstOrDefault(t => typeof(IClass1).IsAssignableFrom(t));
+            IClass1? class1 = assembly.CreateInstance(classType.FullName) as IClass1;
+            var actual = class1?.Stuff("input text here") ?? String.Empty;
+
+            context.Unload();
+
+            return actual;
+        }
+
+        [Fact()]
+        public void ManualTest()
+        {
+            var actual = DoManual(AssemblyContext.VerifyPath(simpleDllPath));
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
+            Assert.Equal("input text here output", actual);
+        }
+
+        [Fact()]
+        public void UsingFactory_WithDependency_Unloads()
+        {
+            var actual = String.Empty;
+            using (var context = AssemblyContext.LoadFromPath(dependentDllPath))
+            {
+                IClass1? class1 = context.GetInstance("Class1") as IClass1;
+                actual = class1?.Stuff("input text here") ?? String.Empty;
+            }
 
             Assert.Equal("input text here output", actual);
         }

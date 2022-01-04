@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 namespace Xc.Loader
 {
     /// <summary>
-    /// class for managing dynamic assembly loading
+    /// class for managing a single assembly dynamically loaded
     /// </summary>
-    public class AssemblyContext : IAssemblyContext, IDisposable
+    public class AssemblyContext : IDisposable
     {
         private bool disposed;
 
@@ -20,58 +20,75 @@ namespace Xc.Loader
         /// </summary>
         public string FilePath { get; private set; }
         /// <summary>
-        /// load context for managing unloading
+        /// name for loading assembly
         /// </summary>
-        public AssemblyLoadContext LoadContext { get; }
+        private AssemblyName? name;
 
         /// <summary>
-        /// loaded assembly
+        /// instance for assembly loading
         /// </summary>
-        public System.Reflection.Assembly Assembly { get; private set; }
-        /// <summary>
-        /// assembly name refrence
-        /// </summary>
-        public AssemblyName Name { get; }
-        /// <summary>
-        /// list of types in assembly
-        /// </summary>
-        public IReadOnlyList<Type> Types { get; private set; } = new List<Type>();
-        /// <summary>
-        /// list of namespaces in assembly
-        /// </summary>
-        public IReadOnlyList<string> NameSpaces { get; private set; } = new List<string>();
-        
+        private AssemblyLoadContext loadContext;
+        private bool isLoaded;
+
         /// <summary>
         /// create an instance of an assembly from a path
         /// </summary>
         /// <param name="filePath"></param>
         /// <param name="isCollectible"></param>
-        public AssemblyContext(string filePath, bool isCollectible = true)
+        public AssemblyContext(string filePath, string? name = null, bool isCollectible = true)
         {
+            if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
             this.FilePath = VerifyPath(filePath);
-
-            this.LoadContext = new System.Runtime.Loader.AssemblyLoadContext(null, isCollectible);
-            this.Assembly = this.LoadContext.LoadFromAssemblyPath(this.FilePath);
-
-            this.Name = this.Assembly.GetName();
-
-            this.getAssemblyInfo();
+            this.setContext(name, isCollectible);
         }
         /// <summary>
         /// create an instance of an assembly by name
         /// </summary>
         /// <param name="name"></param>
         /// <param name="isCollectible"></param>
-        public AssemblyContext(AssemblyName name, bool isCollectible = true)
+        public AssemblyContext(AssemblyName assemblylName, string? name = null, bool isCollectible = true)
+        { 
+            this.FilePath = String.Empty;
+            this.name = assemblylName;
+            this.setContext(name, isCollectible);
+        }
+
+        private void setContext(string? name, bool isCollectible)
         {
-            this.Name = name;
+            this.loadContext = new AssemblyLoadContext(name, isCollectible);
+            this.isLoaded = false;
+        }
 
-            this.LoadContext = new System.Runtime.Loader.AssemblyLoadContext(null, isCollectible);
-            this.Assembly = this.LoadContext.LoadFromAssemblyName(name);
+        private Assembly? loadAssembly()
+        {
+            if (this.isLoaded)
+            {
+                return this.loadContext.Assemblies.FirstOrDefault(o => o.FullName == this.name?.FullName);
+            }
 
-            this.FilePath = this.Assembly.Location;
+            if (!String.IsNullOrEmpty(this.FilePath))
+            {
+                var assembly = this.loadContext.LoadFromAssemblyPath(this.FilePath);
+                if (assembly != null)
+                {
+                    this.name = assembly.GetName();
+                    this.isLoaded = true;
+                    return assembly;
+                }
+            }
+            else if (this.name != null)
+            {
+                var assembly = this.loadContext.LoadFromAssemblyName(this.name);
+                if (assembly != null)
+                {
+                    this.FilePath = assembly.Location;
+                    this.isLoaded = true;
+                    return assembly;
+                }
+            }
 
-            this.getAssemblyInfo();
+            return default;
+
         }
         /// <summary>
         /// Attempts to create an instance from the current assembly given a class name.
@@ -81,9 +98,31 @@ namespace Xc.Loader
         /// <returns></returns>
         public object? GetInstance(string className)
         {
+            var assembly = this.loadAssembly();
+
             if (!className.Contains('.')) className = '.' + className;
-            var instanceType = this.Types.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
-            return instanceType == null ? null : this.Assembly.CreateInstance(instanceType.FullName);
+
+            var instanceType = this.loadContext.Assemblies.SelectMany(o => o.GetTypes()).FirstOrDefault(t => t.FullName?.EndsWith(className) == true);
+
+            return (instanceType == null) ? null : Activator.CreateInstance(instanceType);
+        }
+
+        public static AssemblyContext LoadFromPath(string filePath, string? name = null, bool isCollectible = true)
+        {
+            return new AssemblyContext(filePath, name, isCollectible);
+        }
+
+        /// <summary>
+        /// Attempts to create an instance from the current assembly given a class name.
+        /// If the class does not exist in this assembly a null object is returned.
+        /// </summary>
+        /// <param name="className"></param>
+        /// <returns></returns>
+        public T? GetInstance<T>(string className)
+        {
+            if (!className.Contains('.')) className = '.' + className;
+            var instanceType = this.loadAssembly()?.GetTypes()?.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
+            return (instanceType == null) ? default : (T?)Activator.CreateInstance(instanceType);
         }
         /// <summary>
         /// restrict file path and translat to fully qualified file name
@@ -100,34 +139,26 @@ namespace Xc.Loader
 
             return fullFilePath;
         }
-        /// <summary>
-        /// collect types and namespaces
-        /// </summary>
-        /// <returns></returns>
-        private IReadOnlyList<Type> getAssemblyInfo()
-        {
-            if (this.Types.Count == 0) this.Types = this.Assembly.GetTypes().Where(o => o.IsPublic).ToList();
-            if (this.NameSpaces.Count == 0) this.NameSpaces = this.Types.Where(o => !String.IsNullOrEmpty(o.Namespace)).Select(t => (string)(t.Namespace ?? String.Empty))?.Distinct().ToList() ?? new List<string>();
-            return this.Types;
-        }
+        
         /// <summary>
         /// attempt to unload the load context
         /// </summary>
         /// <returns></returns>
         public bool Unload()
         {
+            if (!this.loadContext.IsCollectible || !this.isLoaded) return false;
+            
             try
             {
-                this.Assembly = default;
-                this.Types = new List<Type>();
-                this.LoadContext.Unload();
+                this.loadContext.Unload();
+                this.isLoaded = false;
                 return true;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine(ex);
+                System.Diagnostics.Debug.WriteLine("**" + ex.Message);
                 return false;
-            }
+            }            
         }
         /// <summary>
         /// simple disposable implentation
@@ -139,9 +170,8 @@ namespace Xc.Loader
                 return;
             }
 
-            this.disposed = true;
-
             this.Unload();
+            this.disposed = true;
         }
     }
 }
