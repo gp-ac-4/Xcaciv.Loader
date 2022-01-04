@@ -1,2 +1,2 @@
 # Xc.Loader
-C# module for runtime loading of types
+Simple C# module for runtime loading of types from exteranl assemblies.
