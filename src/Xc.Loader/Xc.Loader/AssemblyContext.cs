@@ -56,7 +56,26 @@ namespace Xc.Loader
         private void setContext(string? name, bool isCollectible)
         {
             this.loadContext = new AssemblyLoadContext(name, isCollectible);
+            this.loadContext.Resolving += LoadContext_Resolving;
             this.isLoaded = false;
+        }
+
+        private Assembly? LoadContext_Resolving(AssemblyLoadContext context, AssemblyName name)
+        {
+            var filePath = Path.GetDirectoryName(this.FilePath);
+            var resolvedPath = (new AssemblyDependencyResolver(filePath)).ResolveAssemblyToPath(name);
+            if (!String.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
+            {
+                return context.LoadFromAssemblyPath(resolvedPath ?? String.Empty);
+            }
+
+            var manualPath = Path.Combine(filePath, name.Name + ".dll");
+            if (File.Exists(manualPath))
+            {
+                return context.LoadFromAssemblyPath(manualPath ?? String.Empty);
+            }
+
+            return default;
         }
 
         private Assembly? loadAssembly()

@@ -109,7 +109,7 @@ namespace Xc.Loader.Tests
                 actual = class1?.Stuff("input text here") ?? String.Empty;
             }
 
-            Assert.Equal("input text here output", actual);
+            Assert.Equal("5,5,8", actual);
         }
 
     }
