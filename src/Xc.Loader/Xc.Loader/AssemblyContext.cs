@@ -137,11 +137,18 @@ namespace Xc.Loader
         /// </summary>
         /// <param name="className"></param>
         /// <returns></returns>
-        public T? GetInstance<T>(string className)
+        public T GetInstance<T>(string className)
         {
             if (!className.Contains('.')) className = '.' + className;
             var instanceType = this.loadAssembly()?.GetTypes()?.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
-            return (instanceType == null) ? default : (T?)Activator.CreateInstance(instanceType);
+            
+            if (instanceType == null) throw new IndexOutOfRangeException(nameof(className));
+
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+#pragma warning disable CS8603 // Possible null reference return.
+            return (T)Activator.CreateInstance(instanceType);
+#pragma warning restore CS8603 // Possible null reference return.
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
         }
         /// <summary>
         /// restrict file path and translat to fully qualified file name
