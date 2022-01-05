@@ -112,5 +112,18 @@ namespace Xc.Loader.Tests
             Assert.Equal("5,5,8", actual);
         }
 
+        [Fact()]
+        public void UsingStrongTypedFactory_Unloads()
+        {
+            var actual = String.Empty;
+            using (var context = AssemblyContext.LoadFromPath(dependentDllPath))
+            {
+                var class1 = context.GetInstance<IClass1>("Class1");
+                actual = class1?.Stuff("input text here") ?? String.Empty;
+            }
+
+            Assert.Equal("5,5,8", actual);
+        }
+
     }
 }
