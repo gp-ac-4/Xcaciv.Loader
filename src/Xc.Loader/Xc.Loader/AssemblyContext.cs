@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -151,6 +152,56 @@ namespace Xc.Loader
 #pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
         }
         /// <summary>
+        /// collect type instances for a base type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public IEnumerable<T> GetAllInstances<T>()
+        {
+            foreach(var type in this.GetTypes<T>().ToList())
+            {
+                yield return this.GetInstance<T>(type.FullName);
+            }
+        }
+        /// <summary>
+        /// list types from loaded assembly
+        /// </summary>
+        /// <returns></returns>
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "dynamic loaded")]
+        public IEnumerable<Type>? GetTypes()
+        {
+            return this.loadAssembly()?.GetTypes();
+        }
+        /// <summary>
+        /// list types that implement or extend a base type
+        /// </summary>
+        /// <param name="baseType"></param>
+        /// <returns></returns>
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "dynamic loaded")]
+        public IEnumerable<Type>? GetTypes(Type baseType)
+        {
+            return this.loadAssembly()?.GetTypes().Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
+        }
+
+        /// <summary>
+        /// list types that implement or extend a base type
+        /// </summary>
+        /// <param name="baseType"></param>
+        /// <returns></returns>
+        [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "dynamic loaded")]
+        public IEnumerable<Type> GetTypes<T>()
+        {
+            return this.loadAssembly()?.GetTypes().Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract)??new List<Type>();
+        }
+        /// <summary>
+        /// return assembly version
+        /// </summary>
+        /// <returns></returns>
+        public Version GetVersion()
+        {
+            return this.loadAssembly()?.GetName().Version??new Version();
+        }
+        /// <summary>
         /// restrict file path and translat to fully qualified file name
         /// </summary>
         /// <param name="filePath"></param>
@@ -164,8 +215,7 @@ namespace Xc.Loader
             var fullFilePath = Path.GetFullPath(filePath);
 
             return fullFilePath;
-        }
-        
+        }        
         /// <summary>
         /// attempt to unload the load context
         /// </summary>
