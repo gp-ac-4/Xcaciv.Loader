@@ -12,7 +12,7 @@ namespace Xc.Loader
     /// <summary>
     /// class for managing a single assembly dynamically loaded
     /// </summary>
-    public class AssemblyContext : IDisposable
+    public class AssemblyContext : IAssemblyContext
     {
         private bool disposed;
 
@@ -48,7 +48,7 @@ namespace Xc.Loader
         /// <param name="name"></param>
         /// <param name="isCollectible"></param>
         public AssemblyContext(AssemblyName assemblylName, string? name = null, bool isCollectible = true)
-        { 
+        {
             this.FilePath = String.Empty;
             this.name = assemblylName;
             this.setContext(name, isCollectible);
@@ -126,8 +126,14 @@ namespace Xc.Loader
 
             return (instanceType == null) ? null : Activator.CreateInstance(instanceType);
         }
-
-        public static AssemblyContext LoadFromPath(string filePath, string? name = null, bool isCollectible = true)
+        /// <summary>
+        /// factory for creating a disposable context
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="name"></param>
+        /// <param name="isCollectible"></param>
+        /// <returns></returns>
+        public static IAssemblyContext LoadFromPath(string filePath, string? name = null, bool isCollectible = true)
         {
             return new AssemblyContext(filePath, name, isCollectible);
         }
@@ -142,7 +148,7 @@ namespace Xc.Loader
         {
             if (!className.Contains('.')) className = '.' + className;
             var instanceType = this.loadAssembly()?.GetTypes()?.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
-            
+
             if (instanceType == null) throw new IndexOutOfRangeException(nameof(className));
 
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
@@ -158,7 +164,7 @@ namespace Xc.Loader
         /// <returns></returns>
         public IEnumerable<T> GetAllInstances<T>()
         {
-            foreach(var type in this.GetTypes<T>().ToList())
+            foreach (var type in this.GetTypes<T>().ToList())
             {
                 yield return this.GetInstance<T>(type.FullName);
             }
@@ -182,7 +188,6 @@ namespace Xc.Loader
         {
             return this.loadAssembly()?.GetTypes().Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
         }
-
         /// <summary>
         /// list types that implement or extend a base type
         /// </summary>
@@ -191,7 +196,7 @@ namespace Xc.Loader
         [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "dynamic loaded")]
         public IEnumerable<Type> GetTypes<T>()
         {
-            return this.loadAssembly()?.GetTypes().Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract)??new List<Type>();
+            return this.loadAssembly()?.GetTypes().Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? new List<Type>();
         }
         /// <summary>
         /// return assembly version
@@ -199,7 +204,7 @@ namespace Xc.Loader
         /// <returns></returns>
         public Version GetVersion()
         {
-            return this.loadAssembly()?.GetName().Version??new Version();
+            return this.loadAssembly()?.GetName().Version ?? new Version();
         }
         /// <summary>
         /// restrict file path and translat to fully qualified file name
@@ -215,7 +220,7 @@ namespace Xc.Loader
             var fullFilePath = Path.GetFullPath(filePath);
 
             return fullFilePath;
-        }        
+        }
         /// <summary>
         /// attempt to unload the load context
         /// </summary>
@@ -223,7 +228,7 @@ namespace Xc.Loader
         public bool Unload()
         {
             if (!this.loadContext.IsCollectible || !this.isLoaded) return false;
-            
+
             try
             {
                 this.loadContext.Unload();
@@ -234,7 +239,7 @@ namespace Xc.Loader
             {
                 System.Diagnostics.Debug.WriteLine("**" + ex.Message);
                 return false;
-            }            
+            }
         }
         /// <summary>
         /// simple disposable implentation
