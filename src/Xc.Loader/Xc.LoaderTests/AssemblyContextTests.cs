@@ -1,5 +1,5 @@
-﻿using Xunit;
-using Xc.Loader;
+using Xunit;
+using Xcaciv.Loader;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using zTestInterfaces;
 
-namespace Xc.Loader.Tests
+namespace Xcaciv.Loader.Tests
 {
     public class AssemblyContextTests
     {

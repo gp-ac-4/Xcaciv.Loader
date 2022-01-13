@@ -1,13 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>zTestAssembly</AssemblyName>
+    <RootNamespace>zTestAssembly</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\zTestInterfaces\zTestInterfaces.csproj" />
   </ItemGroup>
-
 </Project>
