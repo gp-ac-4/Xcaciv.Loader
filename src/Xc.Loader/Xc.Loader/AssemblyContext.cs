@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Runtime.Loader;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Xc.Loader
+namespace Xcaciv.Loader
 {
     /// <summary>
     /// class for managing a single assembly dynamically loaded

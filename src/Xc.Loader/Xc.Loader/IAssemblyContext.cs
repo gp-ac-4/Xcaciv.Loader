@@ -1,5 +1,5 @@
-﻿
-namespace Xc.Loader
+
+namespace Xcaciv.Loader
 {
     /// <summary>
     /// class for managing dynamic assembly loading
