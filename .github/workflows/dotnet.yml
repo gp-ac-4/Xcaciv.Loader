@@ -36,7 +36,7 @@
 # For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
 # refer to https://github.com/microsoft/github-actions-for-desktop-apps
 
-name: .NET Core Desktop
+name: .NET Test and Build
 
 on:
   push:
@@ -68,8 +68,8 @@ jobs:
         fetch-depth: 0
 
     # Install the .NET Core workload
-    - name: Install .NET
-      uses: actions/setup-dotnet@v3
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
 
