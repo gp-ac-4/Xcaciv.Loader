@@ -78,14 +78,14 @@ jobs:
       uses: microsoft/setup-msbuild@v2
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore $env:Solution_Name
       
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build $env:Solution_Name --no-restore -c $env:Configuration
       
       # Execute all unit tests in the solution
     - name: Execute unit tests
-      run: dotnet test --no-build $env:Test_Project_Path
+      run: dotnet test $env:Test_Project_Path --no-build 
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
