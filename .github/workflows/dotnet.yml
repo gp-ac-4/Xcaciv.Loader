@@ -82,6 +82,8 @@ jobs:
       
     - name: Build
       run: dotnet build $env:Solution_Name --no-restore -c $env:Configuration
+      env:
+        Configuration: ${{ matrix.configuration }}
       
       # Execute all unit tests in the solution
     - name: Execute unit tests
