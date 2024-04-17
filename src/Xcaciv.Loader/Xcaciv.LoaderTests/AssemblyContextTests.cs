@@ -11,8 +11,8 @@ namespace Xcaciv.Loader.Tests
 {
     public class AssemblyContextTests
     {
-        private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\Debug\net6.0\zTestAssembly.dll";
-        private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\Debug\net6.0\zTestDependentAssembly.dll";
+        private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\Debug\net8.0\zTestAssembly.dll";
+        private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\Debug\net8.0\zTestDependentAssembly.dll";
 
         [Fact()]
         public void VerifyPath_Test()
