@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
@@ -15,9 +14,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestAssembly", "TestAssemb
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestInterfaces", "zTestInterfaces\zTestInterfaces.csproj", "{47DF3C90-291B-4BA9-BD60-93E96FA4C05B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "zTestDependentAssembly", "zTestDependentAssembly\zTestDependentAssembly.csproj", "{81C6E4EE-E3BC-4982-94AC-DEC266530E09}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestDependentAssembly", "zTestDependentAssembly\zTestDependentAssembly.csproj", "{81C6E4EE-E3BC-4982-94AC-DEC266530E09}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{32657B9A-1435-43F3-BA24-B1878D8CC0B0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{583D1946-4389-48A2-A558-E81E1F8D41D4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

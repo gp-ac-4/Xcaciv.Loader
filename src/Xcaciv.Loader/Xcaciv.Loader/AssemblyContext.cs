@@ -37,7 +37,6 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="filePath"></param>
     /// <param name="isCollectible"></param>
-    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public AssemblyContext(string filePath, string? name = null, bool isCollectible = true)
     {
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
@@ -50,7 +49,6 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="name"></param>
     /// <param name="isCollectible"></param>
-    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public AssemblyContext(AssemblyName assemblylName, string? name = null, bool isCollectible = true)
     {
         this.FilePath = String.Empty;
@@ -58,7 +56,6 @@ public class AssemblyContext : IAssemblyContext
         this.setContext(name, isCollectible);
     }
 
-    [RequiresUnreferencedCode("Calls Xcaciv.Loader.AssemblyContext.LoadContext_Resolving(AssemblyLoadContext, AssemblyName)")]
     private void setContext(string? name, bool isCollectible)
     {
         this.loadContext = new AssemblyLoadContext(name, isCollectible);
@@ -66,7 +63,6 @@ public class AssemblyContext : IAssemblyContext
         this.isLoaded = false;
     }
 
-    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     private Assembly? LoadContext_Resolving(AssemblyLoadContext context, AssemblyName name)
     {
         if (String.IsNullOrEmpty(this.FilePath)) return default;
@@ -87,7 +83,6 @@ public class AssemblyContext : IAssemblyContext
         return default;
     }
 
-    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     private Assembly? loadAssembly()
     {
         if (this.loadContext == null) throw new InvalidOperationException("Load context not set");
@@ -155,7 +150,10 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="className"></param>
     /// <returns></returns>
-    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
+    /// <exception cref="IndexOutOfRangeException"></exception>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="ArgumentException"></exception>
     public T GetInstance<T>(string className)
     {
         if (!className.Contains('.')) className = '.' + className;
@@ -163,6 +161,7 @@ public class AssemblyContext : IAssemblyContext
 
         if (instanceType == null) throw new IndexOutOfRangeException(nameof(className));
 
+        // Consumer is expected to handle any exceptions
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
 #pragma warning disable CS8603 // Possible null reference return.
         return (T)Activator.CreateInstance(instanceType);
@@ -187,7 +186,6 @@ public class AssemblyContext : IAssemblyContext
     /// list types from loaded assembly
     /// </summary>
     /// <returns></returns>
-    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "dynamic loaded")]
     public IEnumerable<Type>? GetTypes()
     {
         return this.loadAssembly()?.GetTypes();
@@ -197,7 +195,6 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="baseType"></param>
     /// <returns></returns>
-    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "dynamic loaded")]
     public IEnumerable<Type>? GetTypes(Type baseType)
     {
         return this.loadAssembly()?.GetTypes().Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
@@ -207,7 +204,6 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="baseType"></param>
     /// <returns></returns>
-    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "dynamic loaded")]
     public IEnumerable<Type> GetTypes<T>()
     {
         return this.loadAssembly()?.GetTypes().Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? new List<Type>();
