@@ -14,6 +14,7 @@ namespace Xcaciv.Loader;
 /// </summary>
 public class AssemblyContext : IAssemblyContext
 {
+    private const string CALLS_DESCRIPTION = "Calls System.Runtime.Loader.AssemblyLoadContext.LoadFromAssemblyPath(String)";
     private bool disposed;
 
     /// <summary>
@@ -28,25 +29,28 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// instance for assembly loading
     /// </summary>
-    private AssemblyLoadContext loadContext;
-    private bool isLoaded;
+    private AssemblyLoadContext? loadContext = null;
+    private bool isLoaded = false;
 
     /// <summary>
     /// create an instance of an assembly from a path
     /// </summary>
     /// <param name="filePath"></param>
     /// <param name="isCollectible"></param>
+    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public AssemblyContext(string filePath, string? name = null, bool isCollectible = true)
     {
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
         this.FilePath = VerifyPath(filePath);
         this.setContext(name, isCollectible);
     }
+
     /// <summary>
     /// create an instance of an assembly by name
     /// </summary>
     /// <param name="name"></param>
     /// <param name="isCollectible"></param>
+    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public AssemblyContext(AssemblyName assemblylName, string? name = null, bool isCollectible = true)
     {
         this.FilePath = String.Empty;
@@ -54,6 +58,7 @@ public class AssemblyContext : IAssemblyContext
         this.setContext(name, isCollectible);
     }
 
+    [RequiresUnreferencedCode("Calls Xcaciv.Loader.AssemblyContext.LoadContext_Resolving(AssemblyLoadContext, AssemblyName)")]
     private void setContext(string? name, bool isCollectible)
     {
         this.loadContext = new AssemblyLoadContext(name, isCollectible);
@@ -61,26 +66,32 @@ public class AssemblyContext : IAssemblyContext
         this.isLoaded = false;
     }
 
+    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     private Assembly? LoadContext_Resolving(AssemblyLoadContext context, AssemblyName name)
     {
-        var filePath = Path.GetDirectoryName(this.FilePath);
+        if (String.IsNullOrEmpty(this.FilePath)) return default;
+
+        String filePath = Path.GetDirectoryName(this.FilePath) ?? String.Empty;
         var resolvedPath = (new AssemblyDependencyResolver(filePath)).ResolveAssemblyToPath(name);
         if (!String.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
         {
-            return context.LoadFromAssemblyPath(resolvedPath ?? String.Empty);
+            return context.LoadFromAssemblyPath(resolvedPath);
         }
 
-        var manualPath = Path.Combine(filePath, name.Name + ".dll");
+        String manualPath = Path.Combine(filePath, name.Name + ".dll");
         if (File.Exists(manualPath))
         {
-            return context.LoadFromAssemblyPath(manualPath ?? String.Empty);
+            return context.LoadFromAssemblyPath(manualPath);
         }
 
         return default;
     }
 
+    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     private Assembly? loadAssembly()
     {
+        if (this.loadContext == null) throw new InvalidOperationException("Load context not set");
+
         if (this.isLoaded)
         {
             return this.loadContext.Assemblies.FirstOrDefault(o => o.FullName == this.name?.FullName);
@@ -122,7 +133,7 @@ public class AssemblyContext : IAssemblyContext
 
         if (!className.Contains('.')) className = '.' + className;
 
-        var instanceType = this.loadContext.Assemblies.SelectMany(o => o.GetTypes()).FirstOrDefault(t => t.FullName?.EndsWith(className) == true);
+        var instanceType = this.loadContext?.Assemblies.SelectMany(o => o.GetTypes()).FirstOrDefault(t => t.FullName?.EndsWith(className) == true);
 
         return (instanceType == null) ? null : Activator.CreateInstance(instanceType);
     }
@@ -144,6 +155,7 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="className"></param>
     /// <returns></returns>
+    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public T GetInstance<T>(string className)
     {
         if (!className.Contains('.')) className = '.' + className;
@@ -157,16 +169,18 @@ public class AssemblyContext : IAssemblyContext
 #pragma warning restore CS8603 // Possible null reference return.
 #pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
     }
+
     /// <summary>
     /// collect type instances for a base type
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
+    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public IEnumerable<T> GetAllInstances<T>()
     {
         foreach (var type in this.GetTypes<T>().ToList())
         {
-            yield return this.GetInstance<T>(type.FullName);
+            yield return this.GetInstance<T>(type.FullName ?? String.Empty);
         }
     }
     /// <summary>
@@ -198,10 +212,12 @@ public class AssemblyContext : IAssemblyContext
     {
         return this.loadAssembly()?.GetTypes().Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? new List<Type>();
     }
+
     /// <summary>
     /// return assembly version
     /// </summary>
     /// <returns></returns>
+    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public Version GetVersion()
     {
         return this.loadAssembly()?.GetName().Version ?? new Version();
@@ -227,11 +243,11 @@ public class AssemblyContext : IAssemblyContext
     /// <returns></returns>
     public bool Unload()
     {
-        if (!this.loadContext.IsCollectible || !this.isLoaded) return false;
+        if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) return false;
 
         try
         {
-            this.loadContext.Unload();
+            this.loadContext?.Unload();
             this.isLoaded = false;
             return true;
         }

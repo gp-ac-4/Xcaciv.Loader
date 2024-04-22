@@ -6,24 +6,25 @@ using System.Text;
 using System.Threading.Tasks;
 using zTestInterfaces;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit.Abstractions;
 
 namespace Xcaciv.Loader.Tests
 {
     public class AssemblyContextTests
     {
-        private TestContext _testContext;
+        private ITestOutputHelper _testOutput;
         private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\{1}\net8.0\zTestAssembly.dll";
         private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\{1}\net8.0\zTestDependentAssembly.dll";
 
-        public AssemblyContextTests(TestContext testContext)
+        public AssemblyContextTests(ITestOutputHelper output)
         {
-            this._testContext = testContext;
+            this._testOutput = output;
 #if DEBUG
-            this._testContext.WriteLine("Tests in Debug mode");
+            this._testOutput.WriteLine("Tests in Debug mode");
             simpleDllPath = simpleDllPath.Replace("{1}", "Debug");
             dependentDllPath = dependentDllPath.Replace("{1}", "Debug");
 #else
-            this._testContext.WriteLine("Tests in Release mode");
+            this._testContext.WriteLine("Tests in Release mode??");
             simpleDllPath = simpleDllPath.Replace("{1}", "Release");
             dependentDllPath = dependentDllPath.Replace("{1}", "Release");
 #endif
@@ -94,8 +95,8 @@ namespace Xcaciv.Loader.Tests
             var assembly = context.LoadFromAssemblyPath(aPath);
             var location = assembly.Location;
 
-            var classType = assembly.GetTypes().FirstOrDefault(t => typeof(IClass1).IsAssignableFrom(t));
-            IClass1? class1 = assembly.CreateInstance(classType.FullName) as IClass1;
+            var classTypeName = assembly.GetTypes().FirstOrDefault(t => typeof(IClass1).IsAssignableFrom(t))?.FullName ?? String.Empty;
+            IClass1? class1 = assembly.CreateInstance(classTypeName) as IClass1;
             var actual = class1?.Stuff("input text here") ?? String.Empty;
 
             context.Unload();
