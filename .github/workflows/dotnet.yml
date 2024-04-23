@@ -45,7 +45,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
 
     runs-on: windows-latest
@@ -77,33 +76,18 @@ jobs:
       with:
         name: dotnet-results-${{ matrix.dotnet-version }}
         path: TestResults-${{ matrix.dotnet-version }}
-      # Use always() to always run this step to publish test results when there are test failures
       if: ${{ always() }}
 
-  push:
-
+  nugetpush:
+    needs: build
     runs-on: windows-latest
 
     env:
-      Solution_Name: src\Xcaciv.Loader\Xcaciv.Loader.sln                         # your solution name, i.e. MyWpfApp.sln.
       Nuget_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj  # path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
-      Net_Project_Directory: Xcaciv.Loader    # the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
-      Nuget_Package_Path: src\Xcaciv.Loader\Xcaciv.Loader\bin\Release\Xcaciv.Loader.*.*pkg                
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
 
-    - name: Restore dependencies
-      run: |
-        dotnet restore $env:Nuget_Project_Path
-    - name: Debug Build
+    - name: Release Build
       run: |
         dotnet build $env:Nuget_Project_Path --no-restore --configuration Release
     - name: Nuget Package
