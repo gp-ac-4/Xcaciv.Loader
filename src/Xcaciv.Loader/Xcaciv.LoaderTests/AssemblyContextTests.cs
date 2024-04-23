@@ -15,18 +15,19 @@ namespace Xcaciv.Loader.Tests
         private ITestOutputHelper _testOutput;
         private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\{1}\net8.0\zTestAssembly.dll";
         private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\{1}\net8.0\zTestDependentAssembly.dll";
+        private string basePath = @"..\..\..\..\";
 
         public AssemblyContextTests(ITestOutputHelper output)
         {
             this._testOutput = output;
 #if DEBUG
             this._testOutput.WriteLine("Tests in Debug mode");
-            simpleDllPath = simpleDllPath.Replace("{1}", "Debug");
-            dependentDllPath = dependentDllPath.Replace("{1}", "Debug");
+            this.simpleDllPath = simpleDllPath.Replace("{1}", "Debug");
+            this.dependentDllPath = dependentDllPath.Replace("{1}", "Debug");
 #else
             this._testContext.WriteLine("Tests in Release mode??");
-            simpleDllPath = simpleDllPath.Replace("{1}", "Release");
-            dependentDllPath = dependentDllPath.Replace("{1}", "Release");
+            this.simpleDllPath = simpleDllPath.Replace("{1}", "Release");
+            this.dependentDllPath = dependentDllPath.Replace("{1}", "Release");
 #endif
         }
 
@@ -44,9 +45,28 @@ namespace Xcaciv.Loader.Tests
         public void LoadAssembly_Test()
         {
             var expectedPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, simpleDllPath));
-            var context = new Xcaciv.Loader.AssemblyContext(simpleDllPath);
+            var basePath = System.IO.Path.GetDirectoryName(expectedPath) ?? String.Empty;
+            var context = new Xcaciv.Loader.AssemblyContext(simpleDllPath, basePathRestriction:basePath);
 
             Xunit.Assert.Equal(expectedPath, context.FilePath);       
+        }
+
+        [Fact()]
+        public void LoadOutOfRangeAssembly_Test()
+        {
+            var expectedPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, simpleDllPath));
+            
+
+            Xunit.Assert.Throws<ArgumentOutOfRangeException>(() => new Xcaciv.Loader.AssemblyContext(simpleDllPath));
+        }
+
+        [Fact()]
+        public void LoadDoesNotExistAssembly_Test()
+        {
+            var expectedPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "does\\not\\exist.dll"));
+            var context = new Xcaciv.Loader.AssemblyContext(expectedPath, basePathRestriction: "*");
+
+            Xunit.Assert.Throws<System.IO.FileNotFoundException>(() => context.GetInstance("Class1"));
         }
 
 
@@ -55,7 +75,7 @@ namespace Xcaciv.Loader.Tests
         {
             var actual = String.Empty;
 
-            using (var context = new Xcaciv.Loader.AssemblyContext(simpleDllPath))
+            using (var context = new Xcaciv.Loader.AssemblyContext(simpleDllPath, basePathRestriction:"*"))
             {
                 IClass1? class1 = context.GetInstance("Class1") as IClass1;
                 actual = class1?.Stuff("input text here") ?? String.Empty;

@@ -14,8 +14,15 @@ namespace Xcaciv.Loader;
 /// </summary>
 public class AssemblyContext : IAssemblyContext
 {
-    private const string CALLS_DESCRIPTION = "Calls System.Runtime.Loader.AssemblyLoadContext.LoadFromAssemblyPath(String)";
+    /// <summary>
+    /// used by disposal
+    /// </summary>
     private bool disposed;
+
+    /// <summary>
+    /// the directory path that the assembly is restricted to being loaded from
+    /// </summary>
+    public string BasePathRestriction { get; }
 
     /// <summary>
     /// full assembly file path
@@ -36,22 +43,28 @@ public class AssemblyContext : IAssemblyContext
     /// create an instance of an assembly from a path
     /// </summary>
     /// <param name="filePath"></param>
+    /// <param name="name"></param>
     /// <param name="isCollectible"></param>
-    public AssemblyContext(string filePath, string? name = null, bool isCollectible = true)
+    /// <param name="basePathRestriction">the directory path that the assembly is restricted to being loaded from</param>
+    public AssemblyContext(string filePath, string? name = null, bool isCollectible = true, string basePathRestriction = ".")
     {
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
-        this.FilePath = VerifyPath(filePath);
+        this.BasePathRestriction = basePathRestriction;
+        this.FilePath = VerifyPath(filePath, this.BasePathRestriction);
         this.setContext(name, isCollectible);
     }
 
     /// <summary>
-    /// create an instance of an assembly by name
+    /// create an instance of an assembly by unique identity
     /// </summary>
+    /// <param name="assemblylName"></param>
     /// <param name="name"></param>
     /// <param name="isCollectible"></param>
-    public AssemblyContext(AssemblyName assemblylName, string? name = null, bool isCollectible = true)
+    /// <param name="basePathRestriction">the directory path that the assembly is restricted to being loaded from</param>
+    public AssemblyContext(AssemblyName assemblylName, string? name = null, bool isCollectible = true, string basePathRestriction = ".")
     {
         this.FilePath = String.Empty;
+        this.BasePathRestriction = basePathRestriction;
         this.name = assemblylName;
         this.setContext(name, isCollectible);
     }
@@ -107,7 +120,7 @@ public class AssemblyContext : IAssemblyContext
             var assembly = this.loadContext.LoadFromAssemblyName(this.name);
             if (assembly != null)
             {
-                this.FilePath = assembly.Location;
+                this.FilePath = VerifyPath(assembly.Location);
                 this.isLoaded = true;
                 return assembly;
             }
@@ -141,7 +154,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns></returns>
     public static IAssemblyContext LoadFromPath(string filePath, string? name = null, bool isCollectible = true)
     {
-        return new AssemblyContext(filePath, name, isCollectible);
+        return new AssemblyContext(filePath, name, isCollectible, "*");
     }
 
     /// <summary>
@@ -174,7 +187,6 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public IEnumerable<T> GetAllInstances<T>()
     {
         foreach (var type in this.GetTypes<T>().ToList())
@@ -213,23 +225,34 @@ public class AssemblyContext : IAssemblyContext
     /// return assembly version
     /// </summary>
     /// <returns></returns>
-    [RequiresUnreferencedCode(CALLS_DESCRIPTION)]
     public Version GetVersion()
     {
         return this.loadAssembly()?.GetName().Version ?? new Version();
     }
     /// <summary>
-    /// restrict file path and translat to fully qualified file name
+    /// translat to fully qualified file name
+    /// with optional base path restriction
     /// </summary>
     /// <param name="filePath"></param>
-    /// <param name="restrictedPath"></param>
+    /// <param name="basePathRestriction"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
-    public static string VerifyPath(string filePath)
+    public static string VerifyPath(string filePath, string basePathRestriction = "*")
     {
         if (filePath == null) throw new ArgumentNullException(nameof(filePath));
         var fullFilePath = Path.GetFullPath(filePath);
+
+        // Handle the lack of a base path restriction
+        if (basePathRestriction == "*") basePathRestriction = Path.GetDirectoryName(fullFilePath) ?? String.Empty;
+        // resolve base path restriction
+        if (!String.IsNullOrEmpty(basePathRestriction)) basePathRestriction = Path.GetFullPath(basePathRestriction);
+        // final check of base path restriction
+        if (String.IsNullOrEmpty(basePathRestriction)) throw new ArgumentOutOfRangeException(nameof(filePath), $"Invalid base path restriction. ({basePathRestriction})");
+
+
+        // make sure filePath is in the basePathRestriction path
+        if (!fullFilePath.StartsWith(basePathRestriction)) throw new ArgumentOutOfRangeException(nameof(filePath), $"Path was not within the restricted path of {basePathRestriction}. ({fullFilePath})");
 
         return fullFilePath;
     }
