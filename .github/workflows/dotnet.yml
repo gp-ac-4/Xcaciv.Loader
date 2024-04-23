@@ -36,7 +36,7 @@
 # For a complete CI/CD sample to get started with GitHub Action workflows for Desktop Applications,
 # refer to https://github.com/microsoft/github-actions-for-desktop-apps
 
-name: .NET Debug Build and Test
+name: .NET Debug Build and Test and Publish Nuget Package
 
 on:
   push:
@@ -79,3 +79,44 @@ jobs:
         path: TestResults-${{ matrix.dotnet-version }}
       # Use always() to always run this step to publish test results when there are test failures
       if: ${{ always() }}
+
+  push:
+
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: src\Xcaciv.Loader\Xcaciv.Loader.sln                         # your solution name, i.e. MyWpfApp.sln.
+      Nuget_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj  # path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
+      Net_Project_Directory: Xcaciv.Loader    # the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
+      Nuget_Package_Path: src\Xcaciv.Loader\Xcaciv.Loader\bin\Release\Xcaciv.Loader.*.*pkg                
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: |
+        dotnet restore $env:Nuget_Project_Path
+    - name: Debug Build
+      run: |
+        dotnet build $env:Nuget_Project_Path --no-restore --configuration Release
+    - name: Nuget Package
+      run: |
+        dotnet pack $env:Nuget_Project_Path --no-build  --configuration Release
+    - name: Configure Nuget Source
+      run: |
+        dotnet nuget add source "https://nuget.pkg.github.com/xcaciv/index.json" -n "github" -u xcaciv -p ${{ secrets.NUGET_PAT }} --store-password-in-clear-text
+    - name: Nuget Push
+      run: |
+        dotnet nuget push **\*.nupkg -k ${{ secrets.NUGET_PAT }} -s "github" 
+    - name: Cleanup
+      if: always()
+      continue-on-error: true
+      run: |
+        dotnet nuget remove source github
