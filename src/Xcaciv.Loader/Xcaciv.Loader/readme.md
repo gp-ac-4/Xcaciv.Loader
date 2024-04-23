@@ -1,1 +1,1 @@
-Sexy simple C# module for runtime loading of types from exteranl assemblies.
+Sexy simple C# module for runtime loading of types from exteranl assemblies. This is a seperate assembly to abstract AssemblyLoader operations and suppress trimming alets.
