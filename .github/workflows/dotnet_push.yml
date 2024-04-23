@@ -10,10 +10,11 @@ jobs:
     runs-on: windows-latest
 
     env:
-      Solution_Name: src\Xcaciv.Loader\Xcaciv.Loader.sln                         # your solution name, i.e. MyWpfApp.sln.
-      Test_Project_Path: src\Xcaciv.Loader\Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj  # path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
-      Net_Project_Directory: Xcaciv.Loader    # the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
-      Net_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj                   # path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+      Solution_Name: src\Xcaciv.Loader\Xcaciv.Loader.sln                         
+      Test_Project_Path: src\Xcaciv.Loader\Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj  
+      Net_Project_Directory: Xcaciv.Loader    
+      Net_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj                 
+      Nuget_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj
 
     steps:
     - name: Checkout
@@ -32,32 +33,12 @@ jobs:
     - name: Test with dotnet
       run: dotnet test $env:Solution_Name --no-build --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
     - name: Upload dotnet test results
+      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
         name: dotnet-results-${{ matrix.dotnet-version }}
         path: TestResults-${{ matrix.dotnet-version }}
-      if: ${{ always() }}
-
-  nugetpush:
-    needs: build
-    runs-on: windows-latest
-
-    env:
-      Nuget_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj  # path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
-    - name: Restore dependencies
-      run: |
-        dotnet restore $env:Nuget_Project_Path
+      
     - name: Release Build
       run: |
         dotnet build $env:Nuget_Project_Path --no-restore --configuration Release
@@ -69,7 +50,7 @@ jobs:
         dotnet nuget add source "https://nuget.pkg.github.com/xcaciv/index.json" -n "github" -u xcaciv -p ${{ secrets.NUGET_PAT }} --store-password-in-clear-text
     - name: Nuget Push
       run: |
-        dotnet nuget push **\*.nupkg -k ${{ secrets.NUGET_PAT }} -s "github" 
+        dotnet nuget push **\*.nupkg -k ${{ secrets.NUGET_PAT }} -s "github" --skip-duplicate
     - name: Cleanup
       if: always()
       continue-on-error: true
