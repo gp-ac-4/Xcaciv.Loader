@@ -15,7 +15,6 @@ namespace Xcaciv.Loader.Tests
         private ITestOutputHelper _testOutput;
         private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\{1}\net8.0\zTestAssembly.dll";
         private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\{1}\net8.0\zTestDependentAssembly.dll";
-        private string basePath = @"..\..\..\..\";
 
         public AssemblyContextTests(ITestOutputHelper output)
         {
