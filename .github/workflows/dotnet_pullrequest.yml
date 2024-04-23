@@ -1,0 +1,39 @@
+name: .NET Debug Build and Test
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    env:
+      Solution_Name: src\Xcaciv.Loader\Xcaciv.Loader.sln                         # your solution name, i.e. MyWpfApp.sln.
+      Test_Project_Path: src\Xcaciv.Loader\Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj  # path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
+      Net_Project_Directory: Xcaciv.Loader    # the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
+      Net_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj                   # path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore $env:Solution_Name
+    - name: Debug Build
+      run: dotnet build $env:Solution_Name --no-restore --configuration Debug
+    - name: Test with dotnet
+      run: dotnet test $env:Solution_Name --no-build --logger trx --results-directory "TestResults-${{ matrix.dotnet-version }}"
+    - name: Upload dotnet test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: dotnet-results-${{ matrix.dotnet-version }}
+        path: TestResults-${{ matrix.dotnet-version }}
+      if: ${{ always() }}
