@@ -4,7 +4,6 @@
   </PropertyGroup>
   <!-- Applicaiton Versions -->
   <ItemGroup>
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
   <!-- Unit Test Versions -->
   <ItemGroup>
