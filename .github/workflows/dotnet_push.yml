@@ -10,11 +10,9 @@ jobs:
     runs-on: windows-latest
 
     env:
-      Solution_Name: src\Xcaciv.Loader\Xcaciv.Loader.sln                         
-      Test_Project_Path: src\Xcaciv.Loader\Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj  
-      Net_Project_Directory: Xcaciv.Loader    
-      Net_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj                 
-      Nuget_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader\Xcaciv.Loader.csproj
+      Solution_Name: Xcaciv.Loader.sln               
+      Nuget_Project_Path: src\Xcaciv.Loader\Xcaciv.Loader.csproj
+      Nuget_Config_Path: NuGet.config
 
     steps:
     - name: Checkout
@@ -26,6 +24,9 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
+    - name: Configure Nuget Source
+      run: |
+        dotnet nuget update source github -s "https://nuget.pkg.github.com/xcaciv/index.json" -u xcaciv -p ${{ secrets.NUGET_PAT }} --store-password-in-clear-text --configfile $env:Nuget_Config_Path
     - name: Restore dependencies
       run: dotnet restore $env:Solution_Name
     - name: Debug Build

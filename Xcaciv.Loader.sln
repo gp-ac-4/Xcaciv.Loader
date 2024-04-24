@@ -2,13 +2,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Loader", "Xcaciv.Loader\Xcaciv.Loader.csproj", "{741E8D5A-2AEE-42F3-92B1-55BC0DF635A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Loader", "src\Xcaciv.Loader\Xcaciv.Loader.csproj", "{741E8D5A-2AEE-42F3-92B1-55BC0DF635A3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestAssembly", "TestAssembly\zTestAssembly.csproj", "{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestAssembly", "src\TestAssembly\zTestAssembly.csproj", "{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestInterfaces", "zTestInterfaces\zTestInterfaces.csproj", "{47DF3C90-291B-4BA9-BD60-93E96FA4C05B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestInterfaces", "src\zTestInterfaces\zTestInterfaces.csproj", "{47DF3C90-291B-4BA9-BD60-93E96FA4C05B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestDependentAssembly", "zTestDependentAssembly\zTestDependentAssembly.csproj", "{81C6E4EE-E3BC-4982-94AC-DEC266530E09}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestDependentAssembly", "src\zTestDependentAssembly\zTestDependentAssembly.csproj", "{81C6E4EE-E3BC-4982-94AC-DEC266530E09}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{32657B9A-1435-43F3-BA24-B1878D8CC0B0}"
 EndProject
@@ -17,7 +17,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Directory.Packages.props = Directory.Packages.props
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.LoaderTests", "Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj", "{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.LoaderTests", "src\Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj", "{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

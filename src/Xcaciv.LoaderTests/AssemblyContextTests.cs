@@ -23,7 +23,7 @@ namespace Xcaciv.Loader.Tests
             this.simpleDllPath = simpleDllPath.Replace("{1}", "Debug");
             this.dependentDllPath = dependentDllPath.Replace("{1}", "Debug");
 #else
-            this._testContext.WriteLine("Tests in Release mode??");
+            this._testOutput.WriteLine("Tests in Release mode??");
             this.simpleDllPath = simpleDllPath.Replace("{1}", "Release");
             this.dependentDllPath = dependentDllPath.Replace("{1}", "Release");
 #endif
