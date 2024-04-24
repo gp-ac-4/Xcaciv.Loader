@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using zTestInterfaces;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Xunit.Abstractions;
 
 namespace Xcaciv.Loader.Tests

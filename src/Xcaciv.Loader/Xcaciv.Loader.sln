@@ -4,12 +4,6 @@ VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Loader", "Xcaciv.Loader\Xcaciv.Loader.csproj", "{741E8D5A-2AEE-42F3-92B1-55BC0DF635A3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.LoaderTests", "Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj", "{16C1DC13-1977-406E-A7A1-A7E8A52D8923}"
-	ProjectSection(ProjectDependencies) = postProject
-		{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD} = {9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD}
-		{81C6E4EE-E3BC-4982-94AC-DEC266530E09} = {81C6E4EE-E3BC-4982-94AC-DEC266530E09}
-	EndProjectSection
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestAssembly", "TestAssembly\zTestAssembly.csproj", "{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "zTestInterfaces", "zTestInterfaces\zTestInterfaces.csproj", "{47DF3C90-291B-4BA9-BD60-93E96FA4C05B}"
@@ -19,6 +13,11 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{32657B9A-1435-43F3-BA24-B1878D8CC0B0}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{583D1946-4389-48A2-A558-E81E1F8D41D4}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Packages.props = Directory.Packages.props
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.LoaderTests", "Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj", "{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,10 +29,6 @@ Global
 		{741E8D5A-2AEE-42F3-92B1-55BC0DF635A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{741E8D5A-2AEE-42F3-92B1-55BC0DF635A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{741E8D5A-2AEE-42F3-92B1-55BC0DF635A3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{16C1DC13-1977-406E-A7A1-A7E8A52D8923}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{16C1DC13-1977-406E-A7A1-A7E8A52D8923}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{16C1DC13-1977-406E-A7A1-A7E8A52D8923}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{16C1DC13-1977-406E-A7A1-A7E8A52D8923}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -46,15 +41,19 @@ Global
 		{81C6E4EE-E3BC-4982-94AC-DEC266530E09}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81C6E4EE-E3BC-4982-94AC-DEC266530E09}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81C6E4EE-E3BC-4982-94AC-DEC266530E09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{16C1DC13-1977-406E-A7A1-A7E8A52D8923} = {32657B9A-1435-43F3-BA24-B1878D8CC0B0}
 		{9A5D89B5-D5B1-4A6A-96E4-29E3CAD435AD} = {32657B9A-1435-43F3-BA24-B1878D8CC0B0}
 		{47DF3C90-291B-4BA9-BD60-93E96FA4C05B} = {32657B9A-1435-43F3-BA24-B1878D8CC0B0}
 		{81C6E4EE-E3BC-4982-94AC-DEC266530E09} = {32657B9A-1435-43F3-BA24-B1878D8CC0B0}
+		{E61399D8-2419-4CD1-86BF-C3E039C8FCB4} = {32657B9A-1435-43F3-BA24-B1878D8CC0B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D3A16683-730F-4EEF-B8D1-22F5D5FA8FA9}

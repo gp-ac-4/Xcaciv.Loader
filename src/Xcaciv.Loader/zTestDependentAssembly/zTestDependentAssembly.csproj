@@ -8,7 +8,7 @@
     <RootNamespace>zTestDependentAssembly</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
+    <PackageReference Include="Fastenshtein"/>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\zTestInterfaces\zTestInterfaces.csproj" />
