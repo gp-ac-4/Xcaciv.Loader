@@ -227,6 +227,16 @@ public class AssemblyContext : IAssemblyContext
     }
 
     /// <summary>
+    /// list types that implement or extend a base type
+    /// </summary>
+    /// <param name="baseType"></param>
+    /// <returns></returns>
+    public static IEnumerable<Type> GetLoadedTypes<T>()
+    {
+        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? new List<Type>();
+    }
+
+    /// <summary>
     /// return assembly version
     /// </summary>
     /// <returns></returns>
