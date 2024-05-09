@@ -175,6 +175,11 @@ public class AssemblyContext : IAssemblyContext
         if (instanceType == null) throw new IndexOutOfRangeException(nameof(className));
 
         // Consumer is expected to handle any exceptions
+        return GetInstance<T>(instanceType);
+    }
+
+    public static T GetInstance<T>(Type instanceType)
+    {
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
 #pragma warning disable CS8603 // Possible null reference return.
         return (T)Activator.CreateInstance(instanceType);
