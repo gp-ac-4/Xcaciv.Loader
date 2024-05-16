@@ -30,11 +30,11 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     public string FilePath { get; private set; }
     /// <summary>
-    /// assemblyName for loading assembly
+    /// name for loading assembly
     /// </summary>
     private AssemblyName? assemblyName;
     /// <summary>
-    /// string assemblyName for refrence
+    /// string name for refrence
     /// </summary>
     public string FullAssemblyName { get { return this.assemblyName?.FullName ?? String.Empty; } }
     /// <summary>
@@ -94,8 +94,8 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// resolve assembly when not immediately found (not folder adjacent or GAC)
     /// </summary>
-    /// <param assemblyName="context"></param>
-    /// <param assemblyName="fullName"></param>
+    /// <param name="context"></param>
+    /// <param name="name"></param>
     /// <returns></returns>
     private Assembly? LoadContext_Resolving(AssemblyLoadContext context, AssemblyName name)
     {
@@ -164,8 +164,8 @@ public class AssemblyContext : IAssemblyContext
     /// Attempts to create an instance from the current assembly given a class assemblyName.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param assemblyName="className"></param>
-    /// <returns></returns>
+    /// <param name="className"></param>
+    /// <returns>A refrence to the newly created object</returns>
     public object? CreateInstance(string className)
     {
         var assembly = this.loadAssembly();
@@ -177,23 +177,11 @@ public class AssemblyContext : IAssemblyContext
         return (instanceType == null) ? null : Activator.CreateInstance(instanceType);
     }
     /// <summary>
-    /// factory for creating a disposable context
-    /// </summary>
-    /// <param assemblyName="filePath"></param>
-    /// <param assemblyName="fullName"></param>
-    /// <param assemblyName="isCollectible"></param>
-    /// <returns></returns>
-    public static IAssemblyContext LoadFromPath(string filePath, string? name = null, bool isCollectible = true, string basePathRestriction = "*")
-    {
-        return new AssemblyContext(filePath, name, isCollectible, basePathRestriction);
-    }
-
-    /// <summary>
-    /// Attempts to create an instance from the current assembly given a class assemblyName.
+    /// Attempts to create an instance from the current assembly given a class name.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param assemblyName="className"></param>
-    /// <returns></returns>
+    /// <param name="className"></param>
+    /// <returns>A refrence to the newly created object</returns>
     /// <exception cref="IndexOutOfRangeException"></exception>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
@@ -206,7 +194,22 @@ public class AssemblyContext : IAssemblyContext
         if (instanceType == null) throw new IndexOutOfRangeException(nameof(className));
 
         // Consumer is expected to handle any exceptions
-        return GetInstance<T>(instanceType);
+        return ActivateInstance<T>(instanceType);
+    }
+    /// <summary>
+    /// Attempts to create an instance from the current assembly given a class Type.
+    /// If the class does not exist in this assembly a null object is returned
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="instanceType"></param>
+    /// <returns>A refrence to the newly created object</returns>
+    /// <exception cref="IndexOutOfRangeException"></exception>
+    public T CreateInstance<T>(Type instanceType)
+    {
+        if (instanceType == null) throw new IndexOutOfRangeException(nameof(instanceType));
+
+        // Consumer is expected to handle any exceptions
+        return ActivateInstance<T>(instanceType);
     }
     /// <summary>
     /// use the activator
@@ -214,8 +217,8 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="instanceType"></param>
-    /// <returns></returns>
-    public static T GetInstance<T>(Type instanceType)
+    /// <returns>A refrence to the newly created object</returns>
+    public static T ActivateInstance<T>(Type instanceType)
     {
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
 #pragma warning disable CS8603 // Possible null reference return.
@@ -235,7 +238,7 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param assemblyName="baseType"></param>
+    /// <param name="baseType"></param>
     /// <returns></returns>
     public IEnumerable<Type>? GetTypes(Type baseType)
     {
@@ -244,7 +247,6 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param assemblyName="baseType"></param>
     /// <returns></returns>
     public IEnumerable<Type> GetTypes<T>()
     {
@@ -254,7 +256,7 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param assemblyName="baseType"></param>
+    /// <param name="baseType"></param>
     /// <returns></returns>
     public static IEnumerable<Type> GetLoadedTypes<T>()
     {
@@ -273,8 +275,8 @@ public class AssemblyContext : IAssemblyContext
     /// translat to fully qualified file assemblyName
     /// with optional base path restriction
     /// </summary>
-    /// <param assemblyName="filePath"></param>
-    /// <param assemblyName="basePathRestriction"></param>
+    /// <param name="filePath"></param>
+    /// <param name="basePathRestriction"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>

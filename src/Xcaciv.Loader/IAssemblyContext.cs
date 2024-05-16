@@ -15,13 +15,6 @@ public interface IAssemblyContext : IDisposable
     /// </summary>
     string FullAssemblyName { get; }
     /// <summary>
-    /// collect type instances for a base type
-    /// TODO: reimplement or rename/redefine this function
-    /// </summary>
-    /// <typeparam assemblyName="T">base type</typeparam>
-    /// <returns></returns>
-    // IEnumerable<T> GetAllInstances<T>();
-    /// <summary>
     /// Attempts to create an instance from the current assembly given a class assemblyName.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
@@ -35,6 +28,14 @@ public interface IAssemblyContext : IDisposable
     /// <param assemblyName="className"></param>
     /// <returns></returns>
     T CreateInstance<T>(string className);
+    /// <summary>
+    /// Attempts to create an instance from the current assembly given its Type and
+    /// tries to box it to T
+    /// If the class does not exist or cannot be boxed in T a null object is returned.
+    /// </summary>
+    /// <param assemblyName="className"></param>
+    /// <returns></returns>
+    T CreateInstance<T>(Type classType);
     /// <summary>
     /// list types from loaded assembly
     /// </summary>

@@ -89,7 +89,7 @@ namespace Xcaciv.Loader.Tests
 
         private string UseFactory(string path)
         {
-            using (var context = Xcaciv.Loader.AssemblyContext.LoadFromPath(path))
+            using (var context = new AssemblyContext(path, basePathRestriction: "*"))
             {
                 IClass1? class1 = context.CreateInstance("Class1") as IClass1;
                 return class1?.Stuff("input text here") ?? String.Empty;
@@ -138,7 +138,7 @@ namespace Xcaciv.Loader.Tests
         public void UsingFactory_WithDependency_Unloads()
         {
             var actual = String.Empty;
-            using (var context = Xcaciv.Loader.AssemblyContext.LoadFromPath(dependentDllPath))
+            using (var context = new AssemblyContext(dependentDllPath, basePathRestriction: "*"))
             {
                 IClass1? class1 = context.CreateInstance("Class1") as IClass1;
                 actual = class1?.Stuff("input text here") ?? String.Empty;
@@ -151,7 +151,7 @@ namespace Xcaciv.Loader.Tests
         public void UsingStrongTypedFactory_Unloads()
         {
             var actual = String.Empty;
-            using (var context = Xcaciv.Loader.AssemblyContext.LoadFromPath(dependentDllPath))
+            using (var context = new AssemblyContext(dependentDllPath, basePathRestriction: "*"))
             {
                 var class1 = context.CreateInstance<IClass1>("Class1");
                 actual = class1?.Stuff("input text here") ?? String.Empty;
