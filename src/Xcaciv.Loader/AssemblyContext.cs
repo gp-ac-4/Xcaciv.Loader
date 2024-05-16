@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 namespace Xcaciv.Loader;
 
 /// <summary>
-/// class for managing a single assembly dynamically loaded
+/// class for managing a single assembly dynamically loaded and optimistically 
+/// unloaded
 /// </summary>
 public class AssemblyContext : IAssemblyContext
 {
@@ -29,53 +30,73 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     public string FilePath { get; private set; }
     /// <summary>
-    /// name for loading assembly
+    /// assemblyName for loading assembly
     /// </summary>
-    private AssemblyName? name;
-
+    private AssemblyName? assemblyName;
+    /// <summary>
+    /// string assemblyName for refrence
+    /// </summary>
+    public string FullAssemblyName { get { return this.assemblyName?.FullName ?? String.Empty; } }
     /// <summary>
     /// instance for assembly loading
     /// </summary>
     private AssemblyLoadContext? loadContext = null;
+    /// <summary>
+    /// indicator that assembly is loaded
+    /// </summary>
     private bool isLoaded = false;
+    /// <summary>
+    /// instance of assembly reflection
+    /// </summary>
+    private Assembly? assembly;
 
     /// <summary>
-    /// create an instance of an assembly from a path
+    /// create a new AssemblyContext abstraction instance
     /// </summary>
     /// <param name="filePath"></param>
-    /// <param name="name"></param>
+    /// <param name="fullName"></param>
     /// <param name="isCollectible"></param>
     /// <param name="basePathRestriction">the directory path that the assembly is restricted to being loaded from</param>
-    public AssemblyContext(string filePath, string? name = null, bool isCollectible = true, string basePathRestriction = ".")
+    /// <exception cref="ArgumentNullException"></exception>
+    public AssemblyContext(string filePath, string? fullName = null, bool isCollectible = true, string basePathRestriction = ".")
     {
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
         this.BasePathRestriction = basePathRestriction;
         this.FilePath = VerifyPath(filePath, this.BasePathRestriction);
-        this.setContext(name, isCollectible);
+        this.setLoadContext(fullName ?? String.Empty, isCollectible);
     }
 
     /// <summary>
-    /// create an instance of an assembly by unique identity
+    /// create a new AssemblyContext abstraction instance
     /// </summary>
     /// <param name="assemblylName"></param>
-    /// <param name="name"></param>
     /// <param name="isCollectible"></param>
     /// <param name="basePathRestriction">the directory path that the assembly is restricted to being loaded from</param>
-    public AssemblyContext(AssemblyName assemblylName, string? name = null, bool isCollectible = true, string basePathRestriction = ".")
+    public AssemblyContext(AssemblyName assemblylName, bool isCollectible = true, string basePathRestriction = ".") 
     {
         this.FilePath = String.Empty;
         this.BasePathRestriction = basePathRestriction;
-        this.name = assemblylName;
-        this.setContext(name, isCollectible);
+        this.assemblyName = assemblylName;
+        this.setLoadContext(this.assemblyName.FullName, isCollectible);
     }
-
-    private void setContext(string? name, bool isCollectible)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="fullName"></param>
+    /// <param name="isCollectible"></param>
+    protected void setLoadContext(string fullName, bool isCollectible) 
     {
-        this.loadContext = new AssemblyLoadContext(name, isCollectible);
+        loadContext = new AssemblyLoadContext(fullName, isCollectible);
         this.loadContext.Resolving += LoadContext_Resolving;
         this.isLoaded = false;
     }
-
+    
+    /// <summary>
+    /// resolve assembly when not immediately found (not folder adjacent or GAC)
+    /// </summary>
+    /// <param assemblyName="context"></param>
+    /// <param assemblyName="fullName"></param>
+    /// <returns></returns>
     private Assembly? LoadContext_Resolving(AssemblyLoadContext context, AssemblyName name)
     {
         if (String.IsNullOrEmpty(this.FilePath)) return default;
@@ -95,47 +116,57 @@ public class AssemblyContext : IAssemblyContext
 
         return default;
     }
-
-    private Assembly? loadAssembly()
+    /// <summary>
+    /// use the framework's AssemblyLoadContext to provide loading of assembly that 
+    /// can be unloaded later
+    /// </summary>
+    /// <returns>null if we did not find the assembly</returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    protected Assembly? loadAssembly()
     {
         if (this.loadContext == null) throw new InvalidOperationException("Load context not set");
 
-        if (this.isLoaded)
+        // this assembly is already loaded
+        if (assembly != null)
         {
-            return this.loadContext.Assemblies.FirstOrDefault(o => o.FullName == this.name?.FullName);
+            return assembly;
+        }
+        else if (this.isLoaded) // the assembly may be in memory already
+        {
+            assembly = this.loadContext.Assemblies.FirstOrDefault(o => o.FullName == this.assemblyName?.FullName);
+            this.assemblyName = assembly?.GetName();
+            return assembly;
         }
 
         if (!String.IsNullOrEmpty(this.FilePath))
         {
-            var assembly = this.loadContext.LoadFromAssemblyPath(this.FilePath);
+            assembly = this.loadContext.LoadFromAssemblyPath(this.FilePath);
             if (assembly != null)
             {
-                this.name = assembly.GetName();
+                this.assemblyName = assembly.GetName();
                 this.isLoaded = true;
-                return assembly;
             }
         }
-        else if (this.name != null)
+        else if (this.assemblyName != null)
         {
-            var assembly = this.loadContext.LoadFromAssemblyName(this.name);
+            assembly = this.loadContext.LoadFromAssemblyName(this.assemblyName);
             if (assembly != null)
             {
                 this.FilePath = VerifyPath(assembly.Location);
                 this.isLoaded = true;
-                return assembly;
             }
         }
 
-        return default;
-
+        this.assemblyName = assembly?.GetName();
+        return assembly;
     }
     /// <summary>
-    /// Attempts to create an instance from the current assembly given a class name.
+    /// Attempts to create an instance from the current assembly given a class assemblyName.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param name="className"></param>
+    /// <param assemblyName="className"></param>
     /// <returns></returns>
-    public object? GetInstance(string className)
+    public object? CreateInstance(string className)
     {
         var assembly = this.loadAssembly();
 
@@ -148,26 +179,26 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// factory for creating a disposable context
     /// </summary>
-    /// <param name="filePath"></param>
-    /// <param name="name"></param>
-    /// <param name="isCollectible"></param>
+    /// <param assemblyName="filePath"></param>
+    /// <param assemblyName="fullName"></param>
+    /// <param assemblyName="isCollectible"></param>
     /// <returns></returns>
-    public static IAssemblyContext LoadFromPath(string filePath, string? name = null, bool isCollectible = true)
+    public static IAssemblyContext LoadFromPath(string filePath, string? name = null, bool isCollectible = true, string basePathRestriction = "*")
     {
-        return new AssemblyContext(filePath, name, isCollectible, "*");
+        return new AssemblyContext(filePath, name, isCollectible, basePathRestriction);
     }
 
     /// <summary>
-    /// Attempts to create an instance from the current assembly given a class name.
+    /// Attempts to create an instance from the current assembly given a class assemblyName.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param name="className"></param>
+    /// <param assemblyName="className"></param>
     /// <returns></returns>
     /// <exception cref="IndexOutOfRangeException"></exception>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="InvalidOperationException"></exception>
     /// <exception cref="ArgumentException"></exception>
-    public T GetInstance<T>(string className)
+    public T CreateInstance<T>(string className)
     {
         if (!className.Contains('.')) className = '.' + className;
         var instanceType = this.loadAssembly()?.GetTypes()?.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
@@ -177,7 +208,13 @@ public class AssemblyContext : IAssemblyContext
         // Consumer is expected to handle any exceptions
         return GetInstance<T>(instanceType);
     }
-
+    /// <summary>
+    /// use the activator
+    /// compartmentalizes the call for exception/suppression
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="instanceType"></param>
+    /// <returns></returns>
     public static T GetInstance<T>(Type instanceType)
     {
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
@@ -187,18 +224,6 @@ public class AssemblyContext : IAssemblyContext
 #pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
     }
 
-    /// <summary>
-    /// collect type instances for a base type
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
-    public IEnumerable<T> GetAllInstances<T>()
-    {
-        foreach (var type in this.GetTypes<T>().ToList())
-        {
-            yield return this.GetInstance<T>(type.FullName ?? String.Empty);
-        }
-    }
     /// <summary>
     /// list types from loaded assembly
     /// </summary>
@@ -210,7 +235,7 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param name="baseType"></param>
+    /// <param assemblyName="baseType"></param>
     /// <returns></returns>
     public IEnumerable<Type>? GetTypes(Type baseType)
     {
@@ -219,7 +244,7 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param name="baseType"></param>
+    /// <param assemblyName="baseType"></param>
     /// <returns></returns>
     public IEnumerable<Type> GetTypes<T>()
     {
@@ -229,7 +254,7 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param name="baseType"></param>
+    /// <param assemblyName="baseType"></param>
     /// <returns></returns>
     public static IEnumerable<Type> GetLoadedTypes<T>()
     {
@@ -245,11 +270,11 @@ public class AssemblyContext : IAssemblyContext
         return this.loadAssembly()?.GetName().Version ?? new Version();
     }
     /// <summary>
-    /// translat to fully qualified file name
+    /// translat to fully qualified file assemblyName
     /// with optional base path restriction
     /// </summary>
-    /// <param name="filePath"></param>
-    /// <param name="basePathRestriction"></param>
+    /// <param assemblyName="filePath"></param>
+    /// <param assemblyName="basePathRestriction"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
     /// <exception cref="ArgumentOutOfRangeException"></exception>
@@ -281,7 +306,11 @@ public class AssemblyContext : IAssemblyContext
 
         try
         {
-            this.loadContext?.Unload();
+            this.assembly = null;
+            var context = this.loadContext;
+            this.loadContext = null;
+            context?.Unload();
+
             this.isLoaded = false;
             return true;
         }

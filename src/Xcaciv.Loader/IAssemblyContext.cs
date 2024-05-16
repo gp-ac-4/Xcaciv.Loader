@@ -2,7 +2,7 @@
 namespace Xcaciv.Loader;
 
 /// <summary>
-/// class for managing dynamic assembly loading
+/// class for abstracting type loading
 /// </summary>
 public interface IAssemblyContext : IDisposable
 {
@@ -11,25 +11,30 @@ public interface IAssemblyContext : IDisposable
     /// </summary>
     string FilePath { get; }
     /// <summary>
+    /// full assemblyName of the assembly for reference
+    /// </summary>
+    string FullAssemblyName { get; }
+    /// <summary>
     /// collect type instances for a base type
+    /// TODO: reimplement or rename/redefine this function
     /// </summary>
-    /// <typeparam name="T">base type</typeparam>
+    /// <typeparam assemblyName="T">base type</typeparam>
     /// <returns></returns>
-    IEnumerable<T> GetAllInstances<T>();
+    // IEnumerable<T> GetAllInstances<T>();
     /// <summary>
-    /// Attempts to create an instance from the current assembly given a class name.
+    /// Attempts to create an instance from the current assembly given a class assemblyName.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param name="className"></param>
+    /// <param assemblyName="className"></param>
     /// <returns></returns>
-    object? GetInstance(string className);
+    object? CreateInstance(string className);
     /// <summary>
-    /// Attempts to create an instance from the current assembly given a class name.
+    /// Attempts to create an instance from the current assembly given a class assemblyName.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param name="className"></param>
+    /// <param assemblyName="className"></param>
     /// <returns></returns>
-    T GetInstance<T>(string className);
+    T CreateInstance<T>(string className);
     /// <summary>
     /// list types from loaded assembly
     /// </summary>
@@ -38,13 +43,12 @@ public interface IAssemblyContext : IDisposable
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param name="baseType"></param>
+    /// <param assemblyName="baseType"></param>
     /// <returns></returns>
     IEnumerable<Type>? GetTypes(Type baseType);
     /// <summary>
-    /// list types that implement or extend a base type
+    /// list types that implement or extend a base type T
     /// </summary>
-    /// <param name="baseType"></param>
     /// <returns></returns>
     IEnumerable<Type> GetTypes<T>();
     /// <summary>
@@ -54,7 +58,8 @@ public interface IAssemblyContext : IDisposable
     Version GetVersion();
     /// <summary>
     /// attempt to unload the load context
+    /// May or may not be optimistic unloading
     /// </summary>
-    /// <returns></returns>
+    /// <returns>true on success</returns>
     bool Unload();
 }

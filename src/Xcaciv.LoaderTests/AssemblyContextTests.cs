@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using zTestInterfaces;
 using Xunit.Abstractions;
+using System.Reflection;
 
 namespace Xcaciv.Loader.Tests
 {
@@ -64,7 +65,7 @@ namespace Xcaciv.Loader.Tests
             var expectedPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "does\\not\\exist.dll"));
             var context = new Xcaciv.Loader.AssemblyContext(expectedPath, basePathRestriction: "*");
 
-            Xunit.Assert.Throws<System.IO.FileNotFoundException>(() => context.GetInstance("Class1"));
+            Xunit.Assert.Throws<System.IO.FileNotFoundException>(() => context.CreateInstance("Class1"));
         }
 
 
@@ -75,7 +76,7 @@ namespace Xcaciv.Loader.Tests
 
             using (var context = new Xcaciv.Loader.AssemblyContext(simpleDllPath, basePathRestriction:"*"))
             {
-                IClass1? class1 = context.GetInstance("Class1") as IClass1;
+                IClass1? class1 = context.CreateInstance("Class1") as IClass1;
                 actual = class1?.Stuff("input text here") ?? String.Empty;
                 context.Unload();
             }
@@ -90,7 +91,7 @@ namespace Xcaciv.Loader.Tests
         {
             using (var context = Xcaciv.Loader.AssemblyContext.LoadFromPath(path))
             {
-                IClass1? class1 = context.GetInstance("Class1") as IClass1;
+                IClass1? class1 = context.CreateInstance("Class1") as IClass1;
                 return class1?.Stuff("input text here") ?? String.Empty;
             }
         }
@@ -139,7 +140,7 @@ namespace Xcaciv.Loader.Tests
             var actual = String.Empty;
             using (var context = Xcaciv.Loader.AssemblyContext.LoadFromPath(dependentDllPath))
             {
-                IClass1? class1 = context.GetInstance("Class1") as IClass1;
+                IClass1? class1 = context.CreateInstance("Class1") as IClass1;
                 actual = class1?.Stuff("input text here") ?? String.Empty;
             }
 
@@ -152,12 +153,11 @@ namespace Xcaciv.Loader.Tests
             var actual = String.Empty;
             using (var context = Xcaciv.Loader.AssemblyContext.LoadFromPath(dependentDllPath))
             {
-                var class1 = context.GetInstance<IClass1>("Class1");
+                var class1 = context.CreateInstance<IClass1>("Class1");
                 actual = class1?.Stuff("input text here") ?? String.Empty;
             }
 
             Xunit.Assert.Equal("5,5,8", actual);
         }
-
     }
 }
