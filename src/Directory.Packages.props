@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-  <!-- Applicaiton Versions -->
+  <!-- Application Versions -->
   <ItemGroup>
   </ItemGroup>
   <!-- Unit Test Versions -->

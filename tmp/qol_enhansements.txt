@@ -55,8 +55,8 @@ This checklist captures the proposed improvements to enhance the AssemblyContext
     - [x] Repair and run Unit Tests, fix any compilation issues
 - [x] All Reliability improvements completed
     - [x] Repair and run Unit Tests, fix any compilation issues
-- [ ] Begin .NET 8 to 10 conversion
-    - [ ] Repair and run Unit Tests, fix any compilation issues
-- [ ] All .NET 10 specific improvements completed
-- [ ] Final review and Unit Test run
-- [ ] Completed
+- [x] Begin .NET 8 to 10 conversion
+    - [x] Repair and run Unit Tests, fix any compilation issues
+- [x] All .NET 10 specific improvements completed
+- [x] Final review and Unit Test run
+- [x] Completed
