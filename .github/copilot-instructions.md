@@ -120,7 +120,11 @@ Transparency is the principle of designing a system so that its internal state a
 README.md               # Project description, installation/usage instructions
 ```
 
-Naming conventions for namespaces follow the directory structure, e.g., directory `src/ProjectName.Module.SubModule/` contains `ProjectName.Module.SubModule.csproj` whose base namespace is `ProjectName.Module.SubModule`. Each project sub directory extends the base namespace, e.g., `src/ProjectName.Module.SubModule/Services/` contains code in the `ProjectName.Module.SubModule.Services` namespace. One class per file, file name and path must match class name. Avoid using `Helper` or `Utils` in class names, instead use descriptive names. When creating classes specific to a single Command or Service, put them in a subfolder named after the Command or Service.
+Naming conventions for namespaces follow the directory structure, e.g., directory `src/ProjectName.Module.SubModule/` contains `ProjectName.Module.SubModule.csproj` whose base namespace is `ProjectName.Module.SubModule`. Each project sub directory extends the base namespace, e.g., `src/ProjectName.Module.SubModule/Services/` contains code in the `ProjectName.Module.SubModule.Services` namespace. 
+
+One class per file, file name and path must match class name. Always put exception classes in an exception subfolder under the highest level in the project the exception is thrown. 
+
+Avoid using `Helper` or `Utils` in class names, instead use descriptive names. When creating classes specific to a single Command or Service, put them in a subfolder named after the Command or Service.
 
 ---
 

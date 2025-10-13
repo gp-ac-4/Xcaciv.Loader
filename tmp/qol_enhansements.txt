@@ -1,4 +1,4 @@
-- [x]# Quality of Life Improvements Checklist for AssemblyContext
+# Quality of Life Improvements Checklist for AssemblyContext
 
 This checklist captures the proposed improvements to enhance the AssemblyContext implementation according to the SSEM framework attributes and best practices, as well as .NET 8/10 features.
 
@@ -15,6 +15,9 @@ This checklist captures the proposed improvements to enhance the AssemblyContext
 - [x] Refactor `loadAssembly` method into smaller methods (Lines: ~110-140)
 - [x] Extract reusable logic from complex methods (Lines: Throughout file)
 
+### 1.4. Improve Code Organization
+- [x] Move `TypeNotFoundException` to its own file in Exceptions folder (following one-class-per-file principle)
+
 ## 2. Trustworthiness Improvements
 
 ### 2.1. Add Stronger Path Validation
@@ -27,8 +30,8 @@ This checklist captures the proposed improvements to enhance the AssemblyContext
 - [x] Add comprehensive exception handling in assembly loading (Lines: ~110-140)
 
 ### 3.2. Improved Resource Management
-- [ ] Ensure proper cleanup in all edge cases (Lines: Throughout, especially ~265-290)
-- [ ] Implement IAsyncDisposable for better async resource management (Lines: ~280-290)
+- [x] Ensure proper cleanup in all edge cases (Lines: Throughout, especially ~265-290)
+- [x] Implement IAsyncDisposable for better async resource management (Lines: ~280-290)
 
 ## 4. .NET 8/10 Specific Improvements
 
@@ -41,7 +44,7 @@ This checklist captures the proposed improvements to enhance the AssemblyContext
 - [ ] Use modern collection initializers (Lines: Throughout)
 
 ### 4.3. Implement Modern Interfaces
-- [ ] Add IAsyncDisposable implementation (Lines: ~280-290)
+- [x] Add IAsyncDisposable implementation (Lines: ~280-290)
 
 ## Progress Tracking
 
@@ -54,6 +57,6 @@ This checklist captures the proposed improvements to enhance the AssemblyContext
     - [x] Repair and run Unit Tests, fix any compilation issues
 - [ ] Begin .NET 8 to 10 conversion
     - [ ] Repair and run Unit Tests, fix any compilation issues
-- [ ] All .NET 8/10 specific improvements completed
+- [ ] All .NET 10 specific improvements completed
 - [ ] Final review and Unit Test run
 - [ ] Completed

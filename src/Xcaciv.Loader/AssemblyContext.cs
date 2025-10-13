@@ -8,7 +8,9 @@ using System.Runtime.Loader;
 using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+
 
 namespace Xcaciv.Loader;
 
@@ -27,9 +29,19 @@ public class AssemblyContext : IAssemblyContext
     private static readonly Regex FileExtensionRegex = new(@"\.(dll|exe)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     /// <summary>
-    /// used by disposal
+    /// Used by disposal - tracks whether Dispose has been called
     /// </summary>
     private bool disposed;
+    
+    /// <summary>
+    /// Used to synchronize access to resources
+    /// </summary>
+    private readonly object syncLock = new();
+    
+    /// <summary>
+    /// Used for async disposal - cancellation token source for async operations
+    /// </summary>
+    private readonly CancellationTokenSource disposalTokenSource = new();
 
     /// <summary>
     /// the directory path that the assembly is restricted to being loaded from
@@ -40,22 +52,27 @@ public class AssemblyContext : IAssemblyContext
     /// full assembly file path
     /// </summary>
     public string FilePath { get; private set; }
+    
     /// <summary>
     /// name for loading assembly
     /// </summary>
     private AssemblyName? assemblyName;
+    
     /// <summary>
     /// string name for refrence
     /// </summary>
     public string FullAssemblyName { get { return this.assemblyName?.FullName ?? String.Empty; } }
+    
     /// <summary>
     /// instance for assembly loading
     /// </summary>
     private AssemblyLoadContext? loadContext = null;
+    
     /// <summary>
     /// indicator that assembly is loaded
     /// </summary>
     private bool isLoaded = false;
+    
     /// <summary>
     /// instance of assembly reflection
     /// </summary>
@@ -141,6 +158,18 @@ public class AssemblyContext : IAssemblyContext
     }
     
     /// <summary>
+    /// Validates that the instance hasn't been disposed
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">Thrown when the object has been disposed</exception>
+    protected void ThrowIfDisposed()
+    {
+        if (disposed)
+        {
+            throw new ObjectDisposedException(GetType().Name, "This AssemblyContext instance has been disposed.");
+        }
+    }
+    
+    /// <summary>
     /// Loads an assembly from its file path
     /// </summary>
     /// <returns>Loaded assembly or null if loading failed</returns>
@@ -148,6 +177,7 @@ public class AssemblyContext : IAssemblyContext
     /// <exception cref="BadImageFormatException">Thrown when the file is not a valid assembly</exception>
     protected Assembly? LoadFromPath()
     {
+        ThrowIfDisposed();
         ValidateLoadContext();
         
         if (String.IsNullOrEmpty(this.FilePath))
@@ -190,6 +220,7 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic assembly loading is intrinsic to this library")]
     protected Assembly? LoadFromName()
     {
+        ThrowIfDisposed();
         ValidateLoadContext();
         
         if (this.assemblyName == null)
@@ -228,6 +259,7 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic assembly loading is intrinsic to this library")]
     protected Assembly? loadAssembly()
     {
+        ThrowIfDisposed();
         ValidateLoadContext();
 
         // this assembly is already loaded
@@ -270,6 +302,8 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type loading is intrinsic to this library")]
     public object? CreateInstance(string className)
     {
+        ThrowIfDisposed();
+        
         if (string.IsNullOrEmpty(className))
         {
             throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
@@ -320,6 +354,8 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type loading is intrinsic to this library")]
     public T CreateInstance<T>(string className)
     {
+        ThrowIfDisposed();
+        
         if (string.IsNullOrEmpty(className))
         {
             throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
@@ -344,7 +380,7 @@ public class AssemblyContext : IAssemblyContext
 
             if (instanceType == null)
             {
-                throw new TypeNotFoundException(className, assembly.FullName ?? "Unknown Assembly");
+                throw new Exceptions.TypeNotFoundException(className, assembly.FullName ?? "Unknown Assembly");
             }
 
             // Consumer is expected to handle any exceptions
@@ -358,8 +394,9 @@ public class AssemblyContext : IAssemblyContext
         {
             throw new TypeLoadException($"Failed to load types from assembly: {ex.Message}", ex);
         }
-        catch (TypeNotFoundException)
+        catch (Exceptions.TypeNotFoundException)
         {
+            // Create an exit for TypeNotFoundException to preserve stack trace
             throw; // Re-throw the TypeNotFoundException we created
         }
         catch (InvalidCastException ex)
@@ -384,6 +421,8 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type activation is intrinsic to this library")]
     public T CreateInstance<T>(Type instanceType)
     {
+        ThrowIfDisposed();
+        
         if (instanceType == null) throw new ArgumentNullException(nameof(instanceType), "Instance type cannot be null");
 
         try
@@ -429,6 +468,7 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public IEnumerable<Type>? GetTypes()
     {
+        ThrowIfDisposed();
         return this.loadAssembly()?.GetTypes();
     }
     
@@ -440,6 +480,7 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public IEnumerable<Type>? GetTypes(Type baseType)
     {
+        ThrowIfDisposed();
         return this.loadAssembly()?.GetTypes()?.Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
     }
     
@@ -450,6 +491,7 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public IEnumerable<Type> GetTypes<T>()
     {
+        ThrowIfDisposed();
         return this.loadAssembly()?.GetTypes()?.Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? Enumerable.Empty<Type>();
     }
 
@@ -469,6 +511,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns></returns>
     public Version GetVersion()
     {
+        ThrowIfDisposed();
         return this.loadAssembly()?.GetName()?.Version ?? new Version();
     }
     
@@ -565,20 +608,27 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// attempt to unload the load context
     /// </summary>
-    /// <returns></returns>
+    /// <returns>true if unload was successful, false otherwise</returns>
     public bool Unload()
     {
+        if (disposed) return false; // Already disposed
+        
         if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) return false;
 
         try
         {
-            this.assembly = null;
-            var context = this.loadContext;
-            this.loadContext = null;
-            context?.Unload();
+            lock (syncLock)
+            {
+                if (this.loadContext == null) return false;
+                
+                this.assembly = null;
+                var context = this.loadContext;
+                this.loadContext = null;
+                context?.Unload();
 
-            this.isLoaded = false;
-            return true;
+                this.isLoaded = false;
+                return true;
+            }
         }
         catch (Exception ex)
         {
@@ -586,58 +636,118 @@ public class AssemblyContext : IAssemblyContext
             return false;
         }
     }
+    
     /// <summary>
-    /// simple disposable implentation
+    /// Asynchronously unloads the assembly context
+    /// </summary>
+    /// <returns>A task that completes when the unload operation is done</returns>
+    public async Task<bool> UnloadAsync()
+    {
+        if (disposed) return false; // Already disposed
+        
+        if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) return false;
+        
+        try
+        {
+            // Use a task to perform the unload operation asynchronously
+            // to avoid blocking the calling thread
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    lock (syncLock)
+                    {
+                        if (this.loadContext == null) return false;
+                        
+                        this.assembly = null;
+                        var context = this.loadContext;
+                        this.loadContext = null;
+                        context?.Unload();
+
+                        this.isLoaded = false;
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("**" + ex.Message);
+                    return false;
+                }
+            }, disposalTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Operation was cancelled (likely during disposal)
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// Implementation of the IDisposable pattern
+    /// </summary>
+    /// <param name="disposing">true if called from Dispose(), false if called from finalizer</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposed) return;
+        
+        if (disposing)
+        {
+            // Dispose managed resources
+            lock (syncLock)
+            {
+                Unload();
+                disposalTokenSource.Cancel();
+                disposalTokenSource.Dispose();
+            }
+        }
+        
+        // Set disposed flag to prevent use after dispose
+        disposed = true;
+    }
+    
+    /// <summary>
+    /// Implementation of the IDisposable interface
     /// </summary>
     public void Dispose()
     {
-        if (this.disposed)
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+    
+    /// <summary>
+    /// Implementation of the IAsyncDisposable interface
+    /// </summary>
+    /// <returns>A ValueTask that completes when the disposal is done</returns>
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed) return;
+        
+        // Dispose managed resources asynchronously
+        try
         {
-            return;
+            await UnloadAsync().ConfigureAwait(false);
         }
-
-        this.Unload();
-        this.disposed = true;
-    }
-}
-
-/// <summary>
-/// Exception thrown when a requested type cannot be found in an assembly
-/// </summary>
-public class TypeNotFoundException : Exception
-{
-    /// <summary>
-    /// The name of the type that was not found
-    /// </summary>
-    public string TypeName { get; }
-    
-    /// <summary>
-    /// The name of the assembly where the type was expected to be found
-    /// </summary>
-    public string AssemblyName { get; }
-    
-    /// <summary>
-    /// Creates a new instance of TypeNotFoundException
-    /// </summary>
-    /// <param name="typeName">The name of the type that was not found</param>
-    /// <param name="assemblyName">The name of the assembly where the type was expected to be found</param>
-    public TypeNotFoundException(string typeName, string assemblyName) 
-        : base($"Type '{typeName}' was not found in assembly '{assemblyName}'")
-    {
-        TypeName = typeName;
-        AssemblyName = assemblyName;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error during async disposal: {ex.Message}");
+        }
+        
+        // Dispose other managed resources
+        disposalTokenSource.Cancel();
+        disposalTokenSource.Dispose();
+        
+        // Set disposed flag
+        disposed = true;
+        
+        // Suppress finalization
+        GC.SuppressFinalize(this);
     }
     
     /// <summary>
-    /// Creates a new instance of TypeNotFoundException
+    /// Finalizer to ensure resource cleanup in case Dispose is not called
     /// </summary>
-    /// <param name="typeName">The name of the type that was not found</param>
-    /// <param name="assemblyName">The name of the assembly where the type was expected to be found</param>
-    /// <param name="innerException">The exception that is the cause of the current exception</param>
-    public TypeNotFoundException(string typeName, string assemblyName, Exception innerException) 
-        : base($"Type '{typeName}' was not found in assembly '{assemblyName}'", innerException)
+    ~AssemblyContext()
     {
-        TypeName = typeName;
-        AssemblyName = assemblyName;
+        Dispose(false);
     }
 }
