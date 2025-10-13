@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Xcaciv.Loader.Exceptions;
 
 namespace Xcaciv.Loader;
 
@@ -21,10 +21,15 @@ namespace Xcaciv.Loader;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 public class AssemblyContext : IAssemblyContext
 {
-    // Static readonly fields for constants
-    private static readonly string[] ForbiddenDirectories = { 
-        "windows", "system32", "programfiles", "programfiles(x86)", "programdata" 
-    };
+    // Static readonly fields for constants with modern collection initialization
+    private static readonly string[] ForbiddenDirectories = 
+    [
+        "windows", 
+        "system32", 
+        "programfiles", 
+        "programfiles(x86)", 
+        "programdata"
+    ];
     
     private static readonly Regex FileExtensionRegex = new(@"\.(dll|exe)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
@@ -45,8 +50,9 @@ public class AssemblyContext : IAssemblyContext
 
     /// <summary>
     /// the directory path that the assembly is restricted to being loaded from
+    /// Made init-only as it is set only during construction and should not change afterward
     /// </summary>
-    public string BasePathRestriction { get; }
+    public string BasePathRestriction { get; init; }
 
     /// <summary>
     /// full assembly file path
@@ -61,7 +67,7 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// string name for refrence
     /// </summary>
-    public string FullAssemblyName { get { return this.assemblyName?.FullName ?? String.Empty; } }
+    public string FullAssemblyName => this.assemblyName?.FullName ?? String.Empty;
     
     /// <summary>
     /// instance for assembly loading
@@ -97,18 +103,19 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// create a new AssemblyContext abstraction instance
     /// </summary>
-    /// <param name="assemblylName"></param>
+    /// <param name="assemblyName"></param>
     /// <param name="isCollectible"></param>
     /// <param name="basePathRestriction">the directory path that the assembly is restricted to being loaded from</param>
-    public AssemblyContext(AssemblyName assemblylName, bool isCollectible = true, string basePathRestriction = ".") 
+    public AssemblyContext(AssemblyName assemblyName, bool isCollectible = true, string basePathRestriction = ".") 
     {
         this.FilePath = String.Empty;
         this.BasePathRestriction = basePathRestriction;
-        this.assemblyName = assemblylName ?? throw new ArgumentNullException(nameof(assemblylName), "Assembly name cannot be null");
+        this.assemblyName = assemblyName ?? throw new ArgumentNullException(nameof(assemblyName), "Assembly name cannot be null");
         this.setLoadContext(this.assemblyName.FullName, isCollectible);
     }
+    
     /// <summary>
-    /// 
+    /// Sets up the load context for the assembly
     /// </summary>
     /// <param name="fullName"></param>
     /// <param name="isCollectible"></param>
@@ -380,7 +387,7 @@ public class AssemblyContext : IAssemblyContext
 
             if (instanceType == null)
             {
-                throw new Exceptions.TypeNotFoundException(className, assembly.FullName ?? "Unknown Assembly");
+                throw new TypeNotFoundException(className, assembly.FullName ?? "Unknown Assembly");
             }
 
             // Consumer is expected to handle any exceptions
@@ -394,7 +401,7 @@ public class AssemblyContext : IAssemblyContext
         {
             throw new TypeLoadException($"Failed to load types from assembly: {ex.Message}", ex);
         }
-        catch (Exceptions.TypeNotFoundException)
+        catch (TypeNotFoundException)
         {
             // Create an exit for TypeNotFoundException to preserve stack trace
             throw; // Re-throw the TypeNotFoundException we created
@@ -492,7 +499,7 @@ public class AssemblyContext : IAssemblyContext
     public IEnumerable<Type> GetTypes<T>()
     {
         ThrowIfDisposed();
-        return this.loadAssembly()?.GetTypes()?.Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? Enumerable.Empty<Type>();
+        return this.loadAssembly()?.GetTypes()?.Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? [];
     }
 
     /// <summary>
@@ -502,7 +509,7 @@ public class AssemblyContext : IAssemblyContext
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public static IEnumerable<Type> GetLoadedTypes<T>()
     {
-        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? Enumerable.Empty<Type>();
+        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? [];
     }
 
     /// <summary>

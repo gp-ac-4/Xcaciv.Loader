@@ -36,12 +36,12 @@ This checklist captures the proposed improvements to enhance the AssemblyContext
 ## 4. .NET 8/10 Specific Improvements
 
 ### 4.1. Use Modern C# Features
-- [ ] Use `required` properties for mandatory initialization (Lines: ~30-40)
-- [ ] Use `init`-only properties where appropriate (Lines: ~30-40)
+- [x] Use `init`-only properties where appropriate (Lines: ~30-40)
+- [x] Use expression-bodied properties where appropriate
 
 ### 4.2. Performance Improvements
 - [x] Optimize reflection usage with modern .NET APIs (Lines: Throughout)
-- [ ] Use modern collection initializers (Lines: Throughout)
+- [x] Use modern collection initializers (Lines: Throughout)
 
 ### 4.3. Implement Modern Interfaces
 - [x] Add IAsyncDisposable implementation (Lines: ~280-290)
