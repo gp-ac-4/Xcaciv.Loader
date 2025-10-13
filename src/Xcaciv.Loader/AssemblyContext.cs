@@ -24,11 +24,8 @@ public class AssemblyContext : IAssemblyContext
     // Static readonly fields for constants with modern collection initialization
     private static readonly string[] ForbiddenDirectories = 
     [
-        "windows", 
-        "system32", 
-        "programfiles", 
-        "programfiles(x86)", 
-        "programdata"
+        "grouppolicy",
+        "systemprofile"
     ];
     
     private static readonly Regex FileExtensionRegex = new(@"\.(dll|exe)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
