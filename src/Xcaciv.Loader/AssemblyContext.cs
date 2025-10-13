@@ -242,7 +242,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns></returns>
     public IEnumerable<Type>? GetTypes(Type baseType)
     {
-        return this.loadAssembly()?.GetTypes().Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
+        return this.loadAssembly()?.GetTypes()?.Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
     }
     /// <summary>
     /// list types that implement or extend a base type
@@ -250,7 +250,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns></returns>
     public IEnumerable<Type> GetTypes<T>()
     {
-        return this.loadAssembly()?.GetTypes().Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? new List<Type>();
+        return this.loadAssembly()?.GetTypes()?.Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? Enumerable.Empty<Type>();
     }
 
     /// <summary>
@@ -260,7 +260,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns></returns>
     public static IEnumerable<Type> GetLoadedTypes<T>()
     {
-        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? new List<Type>();
+        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? Enumerable.Empty<Type>();
     }
 
     /// <summary>
@@ -269,7 +269,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns></returns>
     public Version GetVersion()
     {
-        return this.loadAssembly()?.GetName().Version ?? new Version();
+        return this.loadAssembly()?.GetName()?.Version ?? new Version();
     }
     /// <summary>
     /// translat to fully qualified file assemblyName

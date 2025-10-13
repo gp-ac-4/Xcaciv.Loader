@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31919.166
+# Visual Studio Version 18
+VisualStudioVersion = 18.0.11109.219 d18.0-oob
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.Loader", "src\Xcaciv.Loader\Xcaciv.Loader.csproj", "{741E8D5A-2AEE-42F3-92B1-55BC0DF635A3}"
 EndProject
@@ -15,6 +15,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{583D1946-4389-48A2-A558-E81E1F8D41D4}"
 	ProjectSection(SolutionItems) = preProject
 		Directory.Packages.props = Directory.Packages.props
+		tmp\qol_enhansements.txt = tmp\qol_enhansements.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.LoaderTests", "src\Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj", "{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}"
