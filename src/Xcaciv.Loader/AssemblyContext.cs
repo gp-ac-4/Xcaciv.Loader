@@ -21,14 +21,32 @@ namespace Xcaciv.Loader;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 public class AssemblyContext : IAssemblyContext
 {
-    // Static readonly fields for constants with modern collection initialization
-    private static readonly string[] ForbiddenDirectories = 
+    // Default list of forbidden directories
+    private static readonly string[] DefaultForbiddenDirectories =
     [
         "grouppolicy",
         "systemprofile"
     ];
     
+    // Extended list of forbidden directories for strict mode
+    private static readonly string[] StrictForbiddenDirectories =
+    [
+        // Basic system directories
+        "windows", "system32", "programfiles", "programfiles(x86)", "programdata",
+        // Specific sensitive directories
+        "grouppolicy", "systemprofile", "winevt\\logs", "credentials", 
+        "windows defender", "appdata\\local\\microsoft\\credentials"
+    ];
+    
+    // Currently active list of forbidden directories
+    private static string[] ForbiddenDirectories = DefaultForbiddenDirectories;
+    
     private static readonly Regex FileExtensionRegex = new(@"\.(dll|exe)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    
+    /// <summary>
+    /// Flag indicating if strict directory restriction mode is enabled
+    /// </summary>
+    private static bool strictDirectoryRestrictionEnabled = false;
     
     /// <summary>
     /// Used by disposal - tracks whether Dispose has been called
@@ -80,6 +98,23 @@ public class AssemblyContext : IAssemblyContext
     /// instance of assembly reflection
     /// </summary>
     private Assembly? assembly;
+    
+    /// <summary>
+    /// Enables or disables strict directory restriction mode.
+    /// When enabled, additional system directories are restricted from loading assemblies.
+    /// </summary>
+    /// <param name="enable">True to enable strict mode, false to disable</param>
+    public static void SetStrictDirectoryRestriction(bool enable)
+    {
+        strictDirectoryRestrictionEnabled = enable;
+        ForbiddenDirectories = enable ? StrictForbiddenDirectories : DefaultForbiddenDirectories;
+    }
+    
+    /// <summary>
+    /// Gets whether strict directory restriction mode is enabled
+    /// </summary>
+    /// <returns>True if strict mode is enabled, false otherwise</returns>
+    public static bool IsStrictDirectoryRestrictionEnabled() => strictDirectoryRestrictionEnabled;
 
     /// <summary>
     /// create a new AssemblyContext abstraction instance
@@ -137,18 +172,33 @@ public class AssemblyContext : IAssemblyContext
         var resolvedPath = (new AssemblyDependencyResolver(filePath)).ResolveAssemblyToPath(name);
         if (!String.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
         {
-            return context.LoadFromAssemblyPath(resolvedPath);
+            return LoadFromPath(context, resolvedPath);
         }
 
         String manualPath = Path.Combine(filePath, name.Name + ".dll");
         if (File.Exists(manualPath))
         {
-            return context.LoadFromAssemblyPath(manualPath);
+            return LoadFromPath(context, manualPath);
         }
 
         return default;
     }
-    
+
+    private static Assembly? LoadFromPath(AssemblyLoadContext context, string path)
+    {
+        try
+        {
+            // Verify the resolved path against security restrictions
+            var verifiedPath = VerifyPath(path);
+            return context.LoadFromAssemblyPath(verifiedPath);
+        }
+        catch (SecurityException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Security restriction prevented loading assembly from {path}: {ex.Message}");
+            return default;
+        }
+    }
+
     /// <summary>
     /// Indicates whether the load context has been initialized
     /// </summary>
