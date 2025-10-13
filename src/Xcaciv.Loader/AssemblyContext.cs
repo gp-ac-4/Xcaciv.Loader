@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -13,6 +14,7 @@ namespace Xcaciv.Loader;
 /// class for managing a single assembly dynamically loaded and optimistically 
 /// unloaded
 /// </summary>
+[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 public class AssemblyContext : IAssemblyContext
 {
     /// <summary>
@@ -60,7 +62,7 @@ public class AssemblyContext : IAssemblyContext
     /// <exception cref="ArgumentNullException"></exception>
     public AssemblyContext(string filePath, string? fullName = null, bool isCollectible = true, string basePathRestriction = ".")
     {
-        if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath));
+        if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath), "Assembly file path cannot be null or empty");
         this.BasePathRestriction = basePathRestriction;
         this.FilePath = VerifyPath(filePath, this.BasePathRestriction);
         this.setLoadContext(fullName ?? String.Empty, isCollectible);
@@ -76,7 +78,7 @@ public class AssemblyContext : IAssemblyContext
     {
         this.FilePath = String.Empty;
         this.BasePathRestriction = basePathRestriction;
-        this.assemblyName = assemblylName;
+        this.assemblyName = assemblylName ?? throw new ArgumentNullException(nameof(assemblylName), "Assembly name cannot be null");
         this.setLoadContext(this.assemblyName.FullName, isCollectible);
     }
     /// <summary>
@@ -100,6 +102,7 @@ public class AssemblyContext : IAssemblyContext
     private Assembly? LoadContext_Resolving(AssemblyLoadContext context, AssemblyName name)
     {
         if (String.IsNullOrEmpty(this.FilePath)) return default;
+        String assemblyPath = String.Empty;
 
         String filePath = Path.GetDirectoryName(this.FilePath) ?? String.Empty;
         var resolvedPath = (new AssemblyDependencyResolver(filePath)).ResolveAssemblyToPath(name);
@@ -116,15 +119,108 @@ public class AssemblyContext : IAssemblyContext
 
         return default;
     }
+        
+    /// <summary>
+    /// Indicates whether the load context has been initialized
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the load context is not set</exception>
+    protected void ValidateLoadContext()
+    {
+        if (this.loadContext == null)
+        {
+            throw new InvalidOperationException("Load context is not set. Make sure initialization was completed successfully.");
+        }
+    }
+    
+    /// <summary>
+    /// Loads an assembly from its file path
+    /// </summary>
+    /// <returns>Loaded assembly or null if loading failed</returns>
+    /// <exception cref="FileNotFoundException">Thrown when the assembly file cannot be found</exception>
+    /// <exception cref="BadImageFormatException">Thrown when the file is not a valid assembly</exception>
+    protected Assembly? LoadFromPath()
+    {
+        ValidateLoadContext();
+        
+        if (String.IsNullOrEmpty(this.FilePath))
+        {
+            throw new InvalidOperationException("Cannot load assembly: File path is not set");
+        }
+
+        if (!File.Exists(this.FilePath))
+        {
+            throw new FileNotFoundException($"Assembly file not found at specified path", this.FilePath);
+        }
+        
+        try
+        {
+            Assembly? loadedAssembly = this.loadContext!.LoadFromAssemblyPath(this.FilePath);
+
+            if (loadedAssembly != null)
+            {
+                this.assemblyName = loadedAssembly.GetName();
+                this.isLoaded = true;
+            }
+            return loadedAssembly;
+        }
+        catch (FileLoadException ex)
+        {
+            throw new FileLoadException($"Failed to load assembly from path: {this.FilePath}", ex);
+        }
+        catch (BadImageFormatException ex)
+        {
+            throw new BadImageFormatException($"The file at path '{this.FilePath}' is not a valid assembly", ex);
+        }
+    }
+    
+    /// <summary>
+    /// Loads an assembly by its name
+    /// </summary>
+    /// <returns>Loaded assembly or null if loading failed</returns>
+    /// <exception cref="FileNotFoundException">Thrown when the assembly cannot be found</exception>
+    /// <exception cref="ArgumentException">Thrown when the assembly name is invalid</exception>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic assembly loading is intrinsic to this library")]
+    protected Assembly? LoadFromName()
+    {
+        ValidateLoadContext();
+        
+        if (this.assemblyName == null)
+        {
+            throw new InvalidOperationException("Cannot load assembly: Assembly name is not set");
+        }
+        
+        try
+        {
+            Assembly? loadedAssembly = this.loadContext!.LoadFromAssemblyName(this.assemblyName);
+            if (loadedAssembly != null)
+            {
+                this.FilePath = VerifyPath(loadedAssembly.Location);
+                this.isLoaded = true;
+            }
+            return loadedAssembly;
+        }
+        catch (FileNotFoundException ex)
+        {
+            throw new FileNotFoundException($"Assembly '{this.assemblyName.FullName}' could not be found", ex);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new ArgumentException($"Invalid assembly name: {this.assemblyName.FullName}", ex);
+        }
+    }
+    
     /// <summary>
     /// use the framework's AssemblyLoadContext to provide loading of assembly that 
     /// can be unloaded later
     /// </summary>
     /// <returns>null if we did not find the assembly</returns>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="InvalidOperationException">Thrown when load context is not set or when assembly cannot be loaded</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the assembly file cannot be found</exception>
+    /// <exception cref="BadImageFormatException">Thrown when the file is not a valid assembly</exception>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic assembly loading is intrinsic to this library")]
     protected Assembly? loadAssembly()
     {
-        if (this.loadContext == null) throw new InvalidOperationException("Load context not set");
+        ValidateLoadContext();
 
         // this assembly is already loaded
         if (assembly != null)
@@ -133,69 +229,141 @@ public class AssemblyContext : IAssemblyContext
         }
         else if (this.isLoaded) // the assembly may be in memory already
         {
-            assembly = this.loadContext.Assemblies.FirstOrDefault(o => o.FullName == this.assemblyName?.FullName);
+            assembly = this.loadContext!.Assemblies.FirstOrDefault(o => o.FullName == this.assemblyName?.FullName);
             this.assemblyName = assembly?.GetName();
             return assembly;
         }
 
         if (!String.IsNullOrEmpty(this.FilePath))
         {
-            assembly = this.loadContext.LoadFromAssemblyPath(this.FilePath);
-            if (assembly != null)
-            {
-                this.assemblyName = assembly.GetName();
-                this.isLoaded = true;
-            }
+            assembly = LoadFromPath();
         }
         else if (this.assemblyName != null)
         {
-            assembly = this.loadContext.LoadFromAssemblyName(this.assemblyName);
-            if (assembly != null)
-            {
-                this.FilePath = VerifyPath(assembly.Location);
-                this.isLoaded = true;
-            }
+            assembly = LoadFromName();
+        }
+        else
+        {
+            throw new InvalidOperationException("Cannot load assembly: Neither file path nor assembly name is set");
         }
 
         this.assemblyName = assembly?.GetName();
         return assembly;
     }
+    
     /// <summary>
     /// Attempts to create an instance from the current assembly given a class assemblyName.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param name="className"></param>
+    /// <param name="className">The name of the class to instantiate</param>
     /// <returns>A refrence to the newly created object</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the assembly cannot be loaded</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the assembly file doesn't exist</exception>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type loading is intrinsic to this library")]
     public object? CreateInstance(string className)
     {
-        var assembly = this.loadAssembly();
+        if (string.IsNullOrEmpty(className))
+        {
+            throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
+        }
+        
+        if (!String.IsNullOrEmpty(this.FilePath) && !File.Exists(this.FilePath))
+        {
+            throw new FileNotFoundException("Assembly file not found at specified path", this.FilePath);
+        }
 
-        if (!className.Contains('.')) className = '.' + className;
+        try
+        {
+            var assembly = this.loadAssembly();
+            if (assembly == null)
+            {
+                return null;
+            }
 
-        var instanceType = this.loadContext?.Assemblies.SelectMany(o => o.GetTypes()).FirstOrDefault(t => t.FullName?.EndsWith(className) == true);
+            if (!className.Contains('.')) className = '.' + className;
 
-        return (instanceType == null) ? null : Activator.CreateInstance(instanceType);
+            var instanceType = this.loadContext?.Assemblies.SelectMany(o => o.GetTypes()).FirstOrDefault(t => t.FullName?.EndsWith(className) == true);
+
+            return (instanceType == null) ? null : Activator.CreateInstance(instanceType);
+        }
+        catch (FileNotFoundException)
+        {
+            throw; // Rethrow file not found exceptions directly
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            throw new InvalidOperationException($"Failed to load types from assembly: {ex.Message}", ex);
+        }
+        catch (Exception ex) when (ex is not ArgumentNullException)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': {ex.Message}", ex);
+        }
     }
+    
     /// <summary>
     /// Attempts to create an instance from the current assembly given a class name.
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
-    /// <param name="className"></param>
+    /// <param name="className">The name of the class to instantiate</param>
     /// <returns>A refrence to the newly created object</returns>
-    /// <exception cref="IndexOutOfRangeException"></exception>
-    /// <exception cref="ArgumentNullException"></exception>
-    /// <exception cref="InvalidOperationException"></exception>
-    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="InvalidOperationException">Thrown when the assembly cannot be loaded</exception>
+    /// <exception cref="TypeNotFoundException">Thrown when the specified class type is not found</exception>
+    /// <exception cref="TypeLoadException">Thrown when there's an error loading the type</exception>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type loading is intrinsic to this library")]
     public T CreateInstance<T>(string className)
     {
-        if (!className.Contains('.')) className = '.' + className;
-        var instanceType = this.loadAssembly()?.GetTypes()?.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
+        if (string.IsNullOrEmpty(className))
+        {
+            throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
+        }
+        
+        if (!String.IsNullOrEmpty(this.FilePath) && !File.Exists(this.FilePath))
+        {
+            throw new FileNotFoundException("Assembly file not found at specified path", this.FilePath);
+        }
 
-        if (instanceType == null) throw new IndexOutOfRangeException(nameof(className));
+        try
+        {
+            if (!className.Contains('.')) className = '.' + className;
+            
+            var assembly = this.loadAssembly();
+            if (assembly == null)
+            {
+                throw new InvalidOperationException($"Failed to load assembly for creating instance of '{className}'");
+            }
+            
+            var instanceType = assembly.GetTypes()?.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
 
-        // Consumer is expected to handle any exceptions
-        return ActivateInstance<T>(instanceType);
+            if (instanceType == null)
+            {
+                throw new TypeNotFoundException(className, assembly.FullName ?? "Unknown Assembly");
+            }
+
+            // Consumer is expected to handle any exceptions
+            return ActivateInstance<T>(instanceType);
+        }
+        catch (FileNotFoundException)
+        {
+            throw; // Rethrow file not found exceptions directly
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            throw new TypeLoadException($"Failed to load types from assembly: {ex.Message}", ex);
+        }
+        catch (TypeNotFoundException)
+        {
+            throw; // Re-throw the TypeNotFoundException we created
+        }
+        catch (InvalidCastException ex)
+        {
+            throw new InvalidCastException($"Cannot convert instance of {className} to type {typeof(T).FullName}", ex);
+        }
+        catch (Exception ex) when (ex is not ArgumentNullException && ex is not InvalidOperationException && ex is not TypeLoadException)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': {ex.Message}", ex);
+        }
     }
+    
     /// <summary>
     /// Attempts to create an instance from the current assembly given a class Type.
     /// If the class does not exist in this assembly a null object is returned
@@ -203,14 +371,28 @@ public class AssemblyContext : IAssemblyContext
     /// <typeparam name="T"></typeparam>
     /// <param name="instanceType"></param>
     /// <returns>A refrence to the newly created object</returns>
-    /// <exception cref="IndexOutOfRangeException"></exception>
+    /// <exception cref="ArgumentNullException">Thrown when instanceType is null</exception>
+    /// <exception cref="InvalidCastException">Thrown when the created object cannot be cast to T</exception>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type activation is intrinsic to this library")]
     public T CreateInstance<T>(Type instanceType)
     {
-        if (instanceType == null) throw new IndexOutOfRangeException(nameof(instanceType));
+        if (instanceType == null) throw new ArgumentNullException(nameof(instanceType), "Instance type cannot be null");
 
-        // Consumer is expected to handle any exceptions
-        return ActivateInstance<T>(instanceType);
+        try
+        {
+            // Consumer is expected to handle any exceptions
+            return ActivateInstance<T>(instanceType);
+        }
+        catch (InvalidCastException ex)
+        {
+            throw new InvalidCastException($"Cannot convert instance of {instanceType.FullName} to type {typeof(T).FullName}", ex);
+        }
+        catch (Exception ex) when (ex is not ArgumentNullException)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{instanceType.FullName}': {ex.Message}", ex);
+        }
     }
+    
     /// <summary>
     /// use the activator
     /// compartmentalizes the call for exception/suppression
@@ -218,36 +400,46 @@ public class AssemblyContext : IAssemblyContext
     /// <typeparam name="T"></typeparam>
     /// <param name="instanceType"></param>
     /// <returns>A refrence to the newly created object</returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type activation is intrinsic to this library")]
     public static T ActivateInstance<T>(Type instanceType)
     {
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-#pragma warning disable CS8603 // Possible null reference return.
-        return (T)Activator.CreateInstance(instanceType);
-#pragma warning restore CS8603 // Possible null reference return.
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+        ArgumentNullException.ThrowIfNull(instanceType);
+        
+        object? instance = Activator.CreateInstance(instanceType);
+        if (instance is null)
+        {
+            throw new InvalidOperationException($"Failed to create instance of {instanceType.FullName}");
+        }
+        
+        return (T)instance;
     }
 
     /// <summary>
     /// list types from loaded assembly
     /// </summary>
     /// <returns></returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public IEnumerable<Type>? GetTypes()
     {
         return this.loadAssembly()?.GetTypes();
     }
+    
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
     /// <param name="baseType"></param>
     /// <returns></returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public IEnumerable<Type>? GetTypes(Type baseType)
     {
         return this.loadAssembly()?.GetTypes()?.Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
     }
+    
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
     /// <returns></returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public IEnumerable<Type> GetTypes<T>()
     {
         return this.loadAssembly()?.GetTypes()?.Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? Enumerable.Empty<Type>();
@@ -256,8 +448,8 @@ public class AssemblyContext : IAssemblyContext
     /// <summary>
     /// list types that implement or extend a base type
     /// </summary>
-    /// <param name="baseType"></param>
     /// <returns></returns>
+    [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public static IEnumerable<Type> GetLoadedTypes<T>()
     {
         return AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? Enumerable.Empty<Type>();
@@ -271,6 +463,7 @@ public class AssemblyContext : IAssemblyContext
     {
         return this.loadAssembly()?.GetName()?.Version ?? new Version();
     }
+    
     /// <summary>
     /// translat to fully qualified file assemblyName
     /// with optional base path restriction
@@ -334,5 +527,46 @@ public class AssemblyContext : IAssemblyContext
 
         this.Unload();
         this.disposed = true;
+    }
+}
+
+/// <summary>
+/// Exception thrown when a requested type cannot be found in an assembly
+/// </summary>
+public class TypeNotFoundException : Exception
+{
+    /// <summary>
+    /// The name of the type that was not found
+    /// </summary>
+    public string TypeName { get; }
+    
+    /// <summary>
+    /// The name of the assembly where the type was expected to be found
+    /// </summary>
+    public string AssemblyName { get; }
+    
+    /// <summary>
+    /// Creates a new instance of TypeNotFoundException
+    /// </summary>
+    /// <param name="typeName">The name of the type that was not found</param>
+    /// <param name="assemblyName">The name of the assembly where the type was expected to be found</param>
+    public TypeNotFoundException(string typeName, string assemblyName) 
+        : base($"Type '{typeName}' was not found in assembly '{assemblyName}'")
+    {
+        TypeName = typeName;
+        AssemblyName = assemblyName;
+    }
+    
+    /// <summary>
+    /// Creates a new instance of TypeNotFoundException
+    /// </summary>
+    /// <param name="typeName">The name of the type that was not found</param>
+    /// <param name="assemblyName">The name of the assembly where the type was expected to be found</param>
+    /// <param name="innerException">The exception that is the cause of the current exception</param>
+    public TypeNotFoundException(string typeName, string assemblyName, Exception innerException) 
+        : base($"Type '{typeName}' was not found in assembly '{assemblyName}'", innerException)
+    {
+        TypeName = typeName;
+        AssemblyName = assemblyName;
     }
 }
