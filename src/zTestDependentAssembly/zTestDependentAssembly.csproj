@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- Default to .NET 8.0 for wider compatibility -->
+    <TargetFramework>net8.0</TargetFramework>
+    <!-- Define a property to conditionally switch to .NET 10 -->
+    <UseNet10 Condition="'$(UseNet10)' == ''">false</UseNet10>
+    <TargetFramework Condition="'$(UseNet10)' == 'true'">net10.0</TargetFramework>
+    
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
