@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 param(
     [Parameter(Mandatory = $false)]
-    [switch]$UseNet10 = $false,
+    [switch]$UseNet10 = $true,
     
     [Parameter(Mandatory = $false)]
     [switch]$Test = $false
@@ -15,7 +15,7 @@ Write-Host "Target Framework: $( if ($UseNet10) { ".NET 10.0" } else { ".NET 8.0
 Write-Host "Run Tests: $( if ($Test) { "Yes" } else { "No" } )"
 Write-Host "====================================================="
 
-# Set MSBuild property for .NET 10 if requested
+# Set MSBuild property for .NET 10 if requested (still passed explicitly for CLI callers)
 $properties = @()
 if ($UseNet10) {
     $properties += "/p:UseNet10=true"
