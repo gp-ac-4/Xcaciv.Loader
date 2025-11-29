@@ -20,31 +20,6 @@ namespace Xcaciv.Loader;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 public class AssemblyContext : IAssemblyContext
 {
-    // Default list of forbidden directories
-    private static readonly string[] DefaultForbiddenDirectories =
-    [
-        "grouppolicy",
-        "systemprofile"
-    ];
-    
-    // Extended list of forbidden directories for strict mode
-    private static readonly string[] StrictForbiddenDirectories =
-    [
-        // Basic system directories
-        "windows", "system32", "programfiles", "programfiles(x86)", "programdata",
-        // Specific sensitive directories
-        "grouppolicy", "systemprofile", "winevt\\logs", "credentials", 
-        "windows defender", "appdata\\local\\microsoft\\credentials"
-    ];
-    
-    // Currently active list of forbidden directories
-    private static string[] ForbiddenDirectories = DefaultForbiddenDirectories;
-    
-    /// <summary>
-    /// Flag indicating if strict directory restriction mode is enabled
-    /// </summary>
-    private static bool strictDirectoryRestrictionEnabled = false;
-    
     /// <summary>
     /// Used by disposal - tracks whether Dispose has been called
     /// </summary>
@@ -100,6 +75,16 @@ public class AssemblyContext : IAssemblyContext
     public event Action<string>? WildcardPathRestrictionUsed;
 
     /// <summary>
+    /// The security policy that controls which directories are forbidden for assembly loading.
+    /// Set during construction and cannot be changed afterward (init-only).
+    /// </summary>
+    /// <remarks>
+    /// <para>If not specified, <see cref="AssemblySecurityPolicy.Default"/> is used.</para>
+    /// <para>Use <see cref="AssemblySecurityPolicy.Strict"/> for enhanced security in production environments.</para>
+    /// </remarks>
+    public AssemblySecurityPolicy SecurityPolicy { get; init; }
+
+    /// <summary>
     /// The directory path that the assembly is restricted to being loaded from.
     /// This provides a security boundary to prevent loading assemblies from arbitrary locations.
     /// </summary>
@@ -150,17 +135,30 @@ public class AssemblyContext : IAssemblyContext
     /// When enabled, additional system directories are restricted from loading assemblies.
     /// </summary>
     /// <param name="enable">True to enable strict mode, false to disable</param>
+    /// <remarks>
+    /// <strong>DEPRECATED:</strong> This static method is obsolete and will be removed in a future version.
+    /// Use <see cref="AssemblySecurityPolicy"/> instead by passing <see cref="AssemblySecurityPolicy.Strict"/>
+    /// or <see cref="AssemblySecurityPolicy.Default"/> to the <see cref="AssemblyContext"/> constructor.
+    /// </remarks>
+    [Obsolete("Use AssemblySecurityPolicy instead. Pass AssemblySecurityPolicy.Strict or AssemblySecurityPolicy.Default to the constructor.", false)]
     public static void SetStrictDirectoryRestriction(bool enable)
     {
-        strictDirectoryRestrictionEnabled = enable;
-        ForbiddenDirectories = enable ? StrictForbiddenDirectories : DefaultForbiddenDirectories;
+        // This method is kept for backward compatibility but does nothing
+        // The security policy is now instance-based
+        System.Diagnostics.Debug.WriteLine(
+            "Warning: SetStrictDirectoryRestriction is deprecated. Use AssemblySecurityPolicy instead.");
     }
     
     /// <summary>
     /// Gets whether strict directory restriction mode is enabled
     /// </summary>
     /// <returns>True if strict mode is enabled, false otherwise</returns>
-    public static bool IsStrictDirectoryRestrictionEnabled() => strictDirectoryRestrictionEnabled;
+    /// <remarks>
+    /// <strong>DEPRECATED:</strong> This static method is obsolete and will be removed in a future version.
+    /// Use <see cref="AssemblyContext.SecurityPolicy"/> instead to check the security policy of an instance.
+    /// </remarks>
+    [Obsolete("Use AssemblyContext.SecurityPolicy.StrictMode instead.", false)]
+    public static bool IsStrictDirectoryRestrictionEnabled() => false;
 
     /// <summary>
     /// Creates a new AssemblyContext for loading and managing a dynamic assembly.
@@ -179,12 +177,22 @@ public class AssemblyContext : IAssemblyContext
     /// <para>Using "*" allows loading assemblies from ANY location, including system directories,
     /// which can lead to arbitrary code execution vulnerabilities.</para>
     /// </param>
+    /// <param name="securityPolicy">
+    /// Optional security policy to control forbidden directories. If not specified, uses <see cref="AssemblySecurityPolicy.Default"/>.
+    /// Use <see cref="AssemblySecurityPolicy.Strict"/> for enhanced security.
+    /// </param>
     /// <example>
     /// <code>
-    /// // ? SECURE: Explicit path restriction
+    /// // ? SECURE: Explicit path restriction with default security policy
     /// var context = new AssemblyContext(
     ///     pluginPath, 
     ///     basePathRestriction: Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins"));
+    /// 
+    /// // ? SECURE: With strict security policy
+    /// var context = new AssemblyContext(
+    ///     pluginPath,
+    ///     basePathRestriction: pluginDir,
+    ///     securityPolicy: AssemblySecurityPolicy.Strict);
     /// 
     /// // ? SECURE: Default restriction to current directory
     /// var context = new AssemblyContext(pluginPath);
@@ -196,11 +204,18 @@ public class AssemblyContext : IAssemblyContext
     /// <exception cref="ArgumentNullException">Thrown when filePath is null or empty</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the file path is outside the base path restriction</exception>
     /// <exception cref="SecurityException">Thrown when path validation fails or points to a restricted directory</exception>
-    public AssemblyContext(string filePath, string? fullName = null, bool isCollectible = true, string basePathRestriction = ".")
+    public AssemblyContext(
+        string filePath, 
+        string? fullName = null, 
+        bool isCollectible = true, 
+        string basePathRestriction = ".",
+        AssemblySecurityPolicy? securityPolicy = null)
     {
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath), "Assembly file path cannot be null or empty");
+        
+        this.SecurityPolicy = securityPolicy ?? AssemblySecurityPolicy.Default;
         this.BasePathRestriction = basePathRestriction;
-        this.FilePath = VerifyPath(filePath, this.BasePathRestriction);
+        this.FilePath = VerifyPath(filePath, this.BasePathRestriction, this.SecurityPolicy);
         this.SetLoadContext(fullName ?? String.Empty, isCollectible);
         
         // Raise security warning if wildcard is used
@@ -225,10 +240,18 @@ public class AssemblyContext : IAssemblyContext
     /// </list>
     /// <para>Using "*" allows loading assemblies from ANY location, including system directories.</para>
     /// </param>
+    /// <param name="securityPolicy">
+    /// Optional security policy to control forbidden directories. If not specified, uses <see cref="AssemblySecurityPolicy.Default"/>.
+    /// </param>
     /// <exception cref="ArgumentNullException">Thrown when assemblyName is null</exception>
-    public AssemblyContext(AssemblyName assemblyName, bool isCollectible = true, string basePathRestriction = ".") 
+    public AssemblyContext(
+        AssemblyName assemblyName, 
+        bool isCollectible = true, 
+        string basePathRestriction = ".",
+        AssemblySecurityPolicy? securityPolicy = null) 
     {
         this.FilePath = String.Empty;
+        this.SecurityPolicy = securityPolicy ?? AssemblySecurityPolicy.Default;
         this.BasePathRestriction = basePathRestriction;
         this.assemblyName = assemblyName ?? throw new ArgumentNullException(nameof(assemblyName), "Assembly name cannot be null");
         this.SetLoadContext(this.assemblyName.FullName, isCollectible);
@@ -279,7 +302,7 @@ public class AssemblyContext : IAssemblyContext
         try
         {
             // Verify the resolved path against security restrictions
-            var verifiedPath = VerifyPath(path);
+            var verifiedPath = VerifyPath(path, "*", this.SecurityPolicy);
             return context.LoadFromAssemblyPath(verifiedPath);
         }
         catch (SecurityException ex)
@@ -399,7 +422,7 @@ public class AssemblyContext : IAssemblyContext
             var loadedAssembly = this.loadContext!.LoadFromAssemblyName(this.assemblyName);
             if (loadedAssembly is not null)
             {
-                this.FilePath = VerifyPath(loadedAssembly.Location);
+                this.FilePath = VerifyPath(loadedAssembly.Location, "*", this.SecurityPolicy);
                 this.isLoaded = true;
                 
                 // Raise success event
@@ -728,13 +751,17 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="filePath">The path to the assembly file</param>
     /// <param name="basePathRestriction">Optional path restriction to limit loading to a specific directory</param>
+    /// <param name="securityPolicy">Security policy defining forbidden directories. If null, uses <see cref="AssemblySecurityPolicy.Default"/></param>
     /// <returns>The full, verified path to the assembly file</returns>
     /// <exception cref="ArgumentNullException">Thrown when filePath is null</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when path is outside the allowed directory</exception>
     /// <exception cref="SecurityException">Thrown when path contains suspicious patterns or points to a system directory</exception>
     /// <exception cref="FileNotFoundException">Thrown when the path doesn't point to a valid file</exception>
-    public static string VerifyPath(string filePath, string basePathRestriction = "*")
+    public static string VerifyPath(string filePath, string basePathRestriction = "*", AssemblySecurityPolicy? securityPolicy = null)
     {
+        // Use default policy if none provided
+        securityPolicy ??= AssemblySecurityPolicy.Default;
+        
         // Basic input validation
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
 
@@ -758,14 +785,10 @@ public class AssemblyContext : IAssemblyContext
                 throw new SecurityException($"Invalid assembly file extension in path: {fullFilePath}. Only .dll and .exe files are allowed.");
             }
 
-            // Check if trying to load from system directories
-            var lowerPath = fullFilePath.ToLowerInvariant();
-            foreach (var forbiddenDir in ForbiddenDirectories)
+            // Check if trying to load from system directories using the security policy
+            if (securityPolicy.ContainsForbiddenDirectory(fullFilePath))
             {
-                if (lowerPath.Contains($"\\{forbiddenDir}\\", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new SecurityException($"Loading assemblies from system directories is not allowed: {fullFilePath}");
-                }
+                throw new SecurityException($"Loading assemblies from system directories is not allowed: {fullFilePath}");
             }
 
             // Handle the base path restriction

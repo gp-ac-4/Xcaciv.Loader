@@ -34,6 +34,7 @@ using (var context = new AssemblyContext(dllPath))
 - Automatic dependency resolution
 - Optional event-based audit trail for security compliance (SSEM)
 - Configurable security policies (default and strict modes)
+- Instance-based security configuration for flexible multi-context scenarios
 
 ## Security Best Practices
 
@@ -80,8 +81,11 @@ var context = new AssemblyContext(userPath, basePathRestriction: "*");
 Enable enhanced security checks to block loading from system directories:
 
 ```csharp
-// Enable strict mode globally (recommended for production)
-AssemblyContext.SetStrictDirectoryRestriction(true);
+// Use strict security policy (recommended for production)
+var context = new AssemblyContext(
+    dllPath, 
+    basePathRestriction: pluginDir,
+    securityPolicy: AssemblySecurityPolicy.Strict);
 
 // In strict mode, these paths are automatically blocked:
 // - C:\Windows\System32
@@ -91,60 +95,52 @@ AssemblyContext.SetStrictDirectoryRestriction(true);
 // - Windows Defender directories
 // - And other sensitive system directories
 
-var context = new AssemblyContext(dllPath, basePathRestriction: pluginDir);
 // Any attempt to load from blocked directories will throw SecurityException
 ```
 
-### Monitor Security Events
+#### Per-Instance Security Policies
 
-Always subscribe to `SecurityViolation` and `WildcardPathRestrictionUsed` events in production:
+Different contexts can use different security policies:
 
 ```csharp
-var context = new AssemblyContext(dllPath, basePathRestriction: pluginDir);
+// Trusted plugins with default security
+var trustedContext = new AssemblyContext(
+    trustedPluginPath,
+    basePathRestriction: trustedPluginDir,
+    securityPolicy: AssemblySecurityPolicy.Default);
 
-// Monitor security violations
-context.SecurityViolation += (path, reason) =>
-{
-    // Log to security audit system
-    securityLogger.LogWarning(
-        "Security violation detected. Path: {Path}, Reason: {Reason}", 
-        path, reason);
-    
-    // Optional: Alert security team for immediate response
-    alertingService.RaiseSecurityAlert(new SecurityAlert
-    {
-        Type = "UnauthorizedAssemblyLoad",
-        Severity = AlertSeverity.High,
-        Path = path,
-        Reason = reason
-    });
-};
+// Untrusted plugins with strict security
+var untrustedContext = new AssemblyContext(
+    untrustedPluginPath,
+    basePathRestriction: untrustedPluginDir,
+    securityPolicy: AssemblySecurityPolicy.Strict);
 
-// Monitor wildcard usage (should never fire in production)
-context.WildcardPathRestrictionUsed += (path) =>
-{
-    securityLogger.LogCritical(
-        "CRITICAL: Wildcard path restriction used in production! Path: {Path}", 
-        path);
-    // This indicates a security misconfiguration
-};
+// Custom security policy
+var customPolicy = new AssemblySecurityPolicy(new[] { "temp", "downloads", "desktop" });
+var customContext = new AssemblyContext(
+    customPluginPath,
+    basePathRestriction: customPluginDir,
+    securityPolicy: customPolicy);
 ```
 
-### Defense in Depth
+#### Migration from Static API (Deprecated)
 
-Layer multiple security controls:
+The old static `SetStrictDirectoryRestriction` method is deprecated:
 
 ```csharp
-// 1. Enable strict mode
+// ? OLD (Deprecated): Global static configuration
 AssemblyContext.SetStrictDirectoryRestriction(true);
-
-// 2. Use explicit path restriction
-var pluginDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins");
-
-// 3. Subscribe to security events
 var context = new AssemblyContext(dllPath, basePathRestriction: pluginDir);
-context.SecurityViolation += LogSecurityViolation;
-context.WildcardPathRestrictionUsed += LogWildcardUsage;
 
-// 4. Verify assembly signatures (future enhancement)
-// 5. Use least-privilege principles for the application process
+// ? NEW: Instance-based configuration
+var context = new AssemblyContext(
+    dllPath,
+    basePathRestriction: pluginDir,
+    securityPolicy: AssemblySecurityPolicy.Strict);
+```
+
+**Benefits of instance-based approach:**
+- No global state - parallel test execution safe
+- Different security policies per context
+- More flexible and testable
+- Thread-safe by design

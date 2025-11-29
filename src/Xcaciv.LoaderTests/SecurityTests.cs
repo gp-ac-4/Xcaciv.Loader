@@ -1,6 +1,8 @@
 using System;
 using System.Security;
+
 using Xcaciv.Loader;
+
 using Xunit;
 
 namespace Xc.LoaderTests;
@@ -10,43 +12,113 @@ public class SecurityTests
     [Fact]
     public void StrictDirectoryRestriction_BlocksSystemDirectories()
     {
-        // Enable strict mode
-        AssemblyContext.SetStrictDirectoryRestriction(true);
+        // Use strict security policy
+        var strictPolicy = AssemblySecurityPolicy.Strict;
         
-        try
-        {
-            // This should throw a SecurityException because it points to a system directory
-            string testPath = @"C:\Windows\System32\kernel32.dll";
-            
-            var exception = Assert.Throws<SecurityException>(() => 
-                AssemblyContext.VerifyPath(testPath));
-            
-            Assert.Contains("system directories", exception.Message, StringComparison.OrdinalIgnoreCase);
-            
-            // Verify strict mode is enabled
-            Assert.True(AssemblyContext.IsStrictDirectoryRestrictionEnabled());
-        }
-        finally
-        {
-            // Reset to default mode for other tests
-            AssemblyContext.SetStrictDirectoryRestriction(false);
-        }
+        // This should throw a SecurityException because it points to a system directory
+        string testPath = @"C:\Windows\System32\kernel32.dll";
+        
+        var exception = Assert.Throws<SecurityException>(() => 
+            AssemblyContext.VerifyPath(testPath, "*", strictPolicy));
+        
+        Assert.Contains("system directories", exception.Message, StringComparison.OrdinalIgnoreCase);
+        
+        // Verify strict mode is enabled
+        Assert.True(strictPolicy.StrictMode);
     }
     
     [Fact]
     public void DefaultMode_ChecksBasicRestrictions()
     {
-        // Ensure default mode is active
-        AssemblyContext.SetStrictDirectoryRestriction(false);
+        // Use default security policy
+        var defaultPolicy = AssemblySecurityPolicy.Default;
         
         // Verify default mode can still validate paths
         string validPath = System.IO.Path.Combine(
-            System.IO.Path.GetDirectoryName(typeof(SecurityTests).Assembly.Location) ?? string.Empty, 
+            System.IO.Path.GetDirectoryName(typeof(SecurityTests).Assembly.Location) ?? String.Empty, 
             "test.dll");
             
-        string result = AssemblyContext.VerifyPath(validPath);
+        string result = AssemblyContext.VerifyPath(validPath, "*", defaultPolicy);
         
         Assert.NotNull(result);
-        Assert.False(AssemblyContext.IsStrictDirectoryRestrictionEnabled());
+        Assert.False(defaultPolicy.StrictMode);
+    }
+    
+    [Fact]
+    public void AssemblyContext_UsesDefaultPolicyWhenNotSpecified()
+    {
+        // Arrange
+        string testPath = System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(typeof(SecurityTests).Assembly.Location) ?? String.Empty, 
+            "test.dll");
+        
+        // Create file for test
+        System.IO.File.WriteAllText(testPath, "test");
+        
+        try
+        {
+            // Act
+            using var context = new AssemblyContext(testPath, basePathRestriction: "*");
+            
+            // Assert
+            Assert.NotNull(context.SecurityPolicy);
+            Assert.False(context.SecurityPolicy.StrictMode);
+            Assert.Equal(AssemblySecurityPolicy.Default.ForbiddenDirectories.Count, 
+                context.SecurityPolicy.ForbiddenDirectories.Count);
+        }
+        finally
+        {
+            // Cleanup
+            if (System.IO.File.Exists(testPath))
+                System.IO.File.Delete(testPath);
+        }
+    }
+    
+    [Fact]
+    public void AssemblyContext_UsesStrictPolicyWhenSpecified()
+    {
+        // Arrange
+        string testPath = System.IO.Path.Combine(
+            System.IO.Path.GetDirectoryName(typeof(SecurityTests).Assembly.Location) ?? String.Empty, 
+            "test.dll");
+        
+        // Create file for test
+        System.IO.File.WriteAllText(testPath, "test");
+        
+        try
+        {
+            // Act
+            using var context = new AssemblyContext(
+                testPath, 
+                basePathRestriction: "*",
+                securityPolicy: AssemblySecurityPolicy.Strict);
+            
+            // Assert
+            Assert.NotNull(context.SecurityPolicy);
+            Assert.True(context.SecurityPolicy.StrictMode);
+            Assert.True(context.SecurityPolicy.ForbiddenDirectories.Count > 
+                AssemblySecurityPolicy.Default.ForbiddenDirectories.Count);
+        }
+        finally
+        {
+            // Cleanup
+            if (System.IO.File.Exists(testPath))
+                System.IO.File.Delete(testPath);
+        }
+    }
+    
+    [Fact]
+    [Obsolete("Testing deprecated method for backward compatibility")]
+    public void ObsoleteMethod_SetStrictDirectoryRestriction_ShowsWarning()
+    {
+        // This test verifies the obsolete method still exists for backward compatibility
+        // It should compile with a warning but not fail
+        #pragma warning disable CS0618 // Type or member is obsolete
+        AssemblyContext.SetStrictDirectoryRestriction(true);
+        var isStrict = AssemblyContext.IsStrictDirectoryRestrictionEnabled();
+        #pragma warning restore CS0618
+        
+        // The obsolete methods don't actually do anything anymore
+        Assert.False(isStrict); // Always returns false now
     }
 }
