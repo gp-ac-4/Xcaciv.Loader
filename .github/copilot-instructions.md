@@ -258,3 +258,12 @@ Create a "Compact" build configuration with the following properties:
 - SelfContained: true for self-contained deployment
 - DebugType: none for release and compact builds
 - TrimmerDefaultAction: link to remove unused code
+
+# Code Review Guidelines for Copilot
+
+- Ensure all methods use PascalCase.
+- Private fields should use camelCase without underscores.
+- Use `is null` / `is not null` for null checks.
+- Access static members with capitalized type names (e.g., `String.Empty`).
+- Flag spelling errors in documentation and project descriptions.
+- Do not suggest combining lines of code if it does not improve functionality.
