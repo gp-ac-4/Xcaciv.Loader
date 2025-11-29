@@ -63,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: Silent failures eliminated - security exceptions now always propagate after raising events
   - `LoadFromPath` helper method now re-throws `SecurityException` after audit event
   - Dependency resolution failures are now visible to callers
+- **Code Modernization**: Null checking standardized to use .NET helper methods
+  - `ArgumentNullException.ThrowIfNull()` for null-only checks
+  - `ArgumentException.ThrowIfNullOrWhiteSpace()` for string checks
+  - Consistent pattern throughout codebase (4 locations updated)
+  - Improved code readability and reduced boilerplate
+  - Follows modern .NET best practices
 - Exception handling improved throughout:
   - Replaced broad `catch (Exception ex) when (ex is not ...)` patterns
   - Added specific exception types with clear error messages

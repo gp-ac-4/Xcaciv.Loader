@@ -399,7 +399,7 @@ public class AssemblyContext : IAssemblyContext
         AssemblySecurityPolicy? securityPolicy = null,
         AssemblyIntegrityVerifier? integrityVerifier = null)
     {
-        if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath), "Assembly file path cannot be null or empty");
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
         
         this.SecurityPolicy = securityPolicy ?? AssemblySecurityPolicy.Default;
         this.IntegrityVerifier = integrityVerifier;
@@ -443,11 +443,13 @@ public class AssemblyContext : IAssemblyContext
         AssemblySecurityPolicy? securityPolicy = null,
         AssemblyIntegrityVerifier? integrityVerifier = null) 
     {
+        ArgumentNullException.ThrowIfNull(assemblyName, nameof(assemblyName));
+        
         this.FilePath = String.Empty;
         this.SecurityPolicy = securityPolicy ?? AssemblySecurityPolicy.Default;
         this.IntegrityVerifier = integrityVerifier;
         this.BasePathRestriction = basePathRestriction;
-        this.assemblyName = assemblyName ?? throw new ArgumentNullException(nameof(assemblyName), "Assembly name cannot be null");
+        this.assemblyName = assemblyName;
         this.SetLoadContext(this.assemblyName.FullName, isCollectible);
     }
     
@@ -755,10 +757,7 @@ public class AssemblyContext : IAssemblyContext
     {
         ThrowIfDisposed();
         
-        if (String.IsNullOrEmpty(className))
-        {
-            throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(className, nameof(className));
         
         if (!String.IsNullOrEmpty(this.FilePath) && !File.Exists(this.FilePath))
         {
@@ -819,10 +818,7 @@ public class AssemblyContext : IAssemblyContext
     {
         ThrowIfDisposed();
         
-        if (String.IsNullOrEmpty(className))
-        {
-            throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(className, nameof(className));
         
         if (!String.IsNullOrEmpty(this.FilePath) && !File.Exists(this.FilePath))
         {
