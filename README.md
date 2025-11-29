@@ -3,7 +3,7 @@
 Sexy simple C# module for runtime loading of types from external assemblies.
 
 ```csharp
-    using (var context = new AssemblyContext(dllPath, basePathRestriction: "*")) // Load
+    using (var context = new AssemblyContext(dllPath, basePathRestriction: AppDomain.CurrentDomain.BaseDirectory)) // Load
     {
         var myInstance = context.CreateInstance<IClass1>("Class1");
         return myInstance.Stuff("input here");
