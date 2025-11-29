@@ -584,8 +584,7 @@ public class AssemblyContext : IAssemblyContext
     public static string VerifyPath(string filePath, string basePathRestriction = "*")
     {
         // Basic input validation
-        if (filePath == null) throw new ArgumentNullException(nameof(filePath), "File path cannot be null");
-        if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("File path cannot be empty or whitespace", nameof(filePath));
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
 
         try
         {
