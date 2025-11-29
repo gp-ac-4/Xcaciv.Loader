@@ -1074,85 +1074,22 @@ public class EventTests
 ---
 
 ### Phase 2: Maintainability (Week 2)
-5. ?? MAINT-001: Refactor VerifyPath
-6. ?? MAINT-004: Extract GetLoadedTypes to utility class
-7. ?? DOC-001: Enhance event documentation
-8. ?? NET-001: Use ArgumentNullException.ThrowIfNull consistently
+5. ?? **SKIPPED** - MAINT-001: Refactor VerifyPath (not necessary - AssemblyPathValidator provides utilities)
+6. ? **COMPLETED** - MAINT-004: Extract GetLoadedTypes to utility class
+7. ? **COMPLETED** - DOC-001: Enhance event documentation
+8. ?? **DEFERRED** - NET-001: Use ArgumentNullException.ThrowIfNull consistently (see v2.1-future-enhancements.md)
+
+**Phase 2 Progress: 2/4 Core items complete, 1 skipped, 1 deferred**
 
 ### Phase 3: Testing (Week 3)
-9. ?? TEST-001: Security violation tests
-10. ?? TEST-003: Event firing tests
-11. ?? TEST-002: Thread safety tests (if time permits)
+9. ?? **DEFERRED** - TEST-001: Security violation tests (see v2.1-future-enhancements.md)
+10. ?? **DEFERRED** - TEST-003: Event firing tests (see v2.1-future-enhancements.md)
+11. ?? **DEFERRED** - TEST-002: Thread safety tests (see v2.1-future-enhancements.md)
+
+**Phase 3 Status:** All deferred to v2.1+ based on customer feedback
 
 ### Phase 4: Optional Enhancements (Future)
-12. ?? MAINT-002: Path validator interface (if testing becomes priority)
-13. ?? PERF-002: Timeout support (if customer requests)
-14. ?? API-001: Input sanitization helpers
-
----
-
-## Breaking Changes Summary
-
-### High Impact (Require Migration)
-- **MAINT-003**: Static security configuration ? instance-based
-  - `SetStrictDirectoryRestriction()` ? `AssemblySecurityPolicy`
-  - Migration: Pass policy to constructor
-
-### Medium Impact (Method Moved)
-- **MAINT-004**: `GetLoadedTypes<T>()` ? `AssemblyScanner.GetLoadedTypes<T>()`
-  - Migration: Change call site
-
-### Low Impact (Behavior Change)
-- **REL-001**: Silent failures now throw exceptions
-  - Migration: Add try-catch if needed
-
----
-
-## Compatibility Matrix
-
-| Change | .NET 8 | .NET 10 | Breaking | Migration Effort |
-|--------|--------|---------|----------|------------------|
-| REL-001 | ? | ? | ?? Behavioral | Low |
-| REL-002 | ? | ? | ?? Behavioral | Low |
-| MAINT-001 | ? | ? | ? No | None |
-| MAINT-003 | ? | ? | ? API | Medium |
-| MAINT-004 | ? | ? | ? API | Low |
-| TRUST-001 | ? | ? | ? No | None |
-| All Others | ? | ? | ? No | None |
-
----
-
-## Success Criteria
-
-### SSEM Score Targets
-
-| Pillar | Current | Target | Key Improvements |
-|--------|---------|--------|------------------|
-| Maintainability | 7.0 | 8.5 | Refactoring, testability |
-| Trustworthiness | 9.0 | 9.5 | Documentation, events |
-| Reliability | 8.0 | 9.0 | Exception handling, tests |
-| **Overall** | **8.0** | **9.0** | Comprehensive improvements |
-
-### Measurable Outcomes
-- ? Zero silent failures in error paths
-- ? 100% event coverage in tests
-- ? All methods under 50 lines
-- ? Test coverage >80%
-- ? Zero static mutable state
-- ? All security controls tested
-
----
-
-## Notes
-
-- This checklist prioritizes production readiness and security
-- Optional enhancements can be deferred to future releases
-- Breaking changes should be clearly documented in CHANGELOG
-- Consider semantic versioning: these changes warrant a major version bump
-- Migration guide should be provided for breaking changes
-
----
-
-**Document Version:** 1.1  
-**Last Updated:** 2025-11-29  
-**Status:** Ready for Implementation
+12. ?? **DEFERRED** - MAINT-002: Path validator interface (see v2.1-future-enhancements.md)
+13. ?? **DEFERRED** - PERF-002: Timeout support (see v2.1-future-enhancements.md)
+14. ? **COMPLETED** - API-001: Input sanitization helpers (AssemblyPathValidator)
+15. ?? **IN PROGRESS** - PERF-001: Document UnloadAsync limitations

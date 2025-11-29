@@ -1050,9 +1050,65 @@ public class AssemblyContext : IAssemblyContext
     }
     
     /// <summary>
-    /// Asynchronously unloads the assembly context
+    /// Asynchronously unloads the assembly context by executing the unload operation on a thread pool thread.
     /// </summary>
-    /// <returns>A task that completes when the unload operation is done</returns>
+    /// <returns>
+    /// A task that represents the asynchronous unload operation. 
+    /// The task result is true if the unload was successful, false otherwise.
+    /// </returns>
+    /// <remarks>
+    /// <para><strong>Implementation Note:</strong> This method provides an async API wrapper around the inherently synchronous assembly unloading process.</para>
+    /// <para><strong>Async Behavior:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description>.NET's <see cref="AssemblyLoadContext.Unload"/> is fundamentally synchronous</description></item>
+    ///   <item><description>This method uses <see cref="Task.Run"/> to avoid blocking the calling thread</description></item>
+    ///   <item><description>The actual unload operation still executes synchronously on a thread pool thread</description></item>
+    ///   <item><description>True async/await benefits are limited to preventing caller thread blocking</description></item>
+    /// </list>
+    /// <para><strong>When to Use:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description>Calling from UI threads where blocking would freeze the interface</description></item>
+    ///   <item><description>ASP.NET request handlers where thread pool thread blocking is undesirable</description></item>
+    ///   <item><description>Async/await-based code patterns for consistency</description></item>
+    /// </list>
+    /// <para><strong>When NOT to Use:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description>Console applications or background services where synchronous <see cref="Unload"/> is clearer</description></item>
+    ///   <item><description>Hot paths where thread pool overhead is a concern</description></item>
+    ///   <item><description>When true asynchronous I/O behavior is required (not available for assembly unloading)</description></item>
+    /// </list>
+    /// <para><strong>Thread Safety:</strong> This method is thread-safe and uses proper locking to prevent concurrent unload attempts.</para>
+    /// <para><strong>Cancellation:</strong> The operation respects disposal cancellation tokens.</para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// // UI application - avoid blocking UI thread
+    /// private async void UnloadButton_Click(object sender, EventArgs e)
+    /// {
+    ///     bool success = await context.UnloadAsync();
+    ///     if (success)
+    ///         StatusLabel.Text = "Assembly unloaded successfully";
+    /// }
+    /// 
+    /// // ASP.NET - async pattern for consistency
+    /// public async Task&lt;IActionResult&gt; UnloadPlugin(string pluginId)
+    /// {
+    ///     var context = pluginManager.GetContext(pluginId);
+    ///     bool unloaded = await context.UnloadAsync();
+    ///     return Ok(new { unloaded });
+    /// }
+    /// 
+    /// // Console/background service - synchronous is clearer
+    /// public void UnloadPlugin(string pluginPath)
+    /// {
+    ///     using var context = new AssemblyContext(pluginPath);
+    ///     // ... use plugin ...
+    ///     context.Unload(); // Simpler and more direct
+    /// }
+    /// </code>
+    /// </example>
+    /// <exception cref="OperationCanceledException">Thrown if disposal was initiated during the unload operation</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the assembly unload fails (e.g., objects still referenced)</exception>
     public async Task<bool> UnloadAsync()
     {
         if (disposed) return false;
