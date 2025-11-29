@@ -13,7 +13,7 @@
     <AssemblyName>Xcaciv.Loader</AssemblyName>
     <RootNamespace>Xcaciv.Loader</RootNamespace>
     <Title>Xcaciv Loader</Title>
-    <Description>Sexy simple C# module for runtime loading of types from exteranl assemblies.</Description>
+    <Description>Sexy simple C# module for runtime loading of types from external assemblies.</Description>
     <PackageProjectUrl>https://github.com/Xcaciv/Xcaciv.Loader</PackageProjectUrl>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/Xcaciv/Xcaciv.Loader</RepositoryUrl>

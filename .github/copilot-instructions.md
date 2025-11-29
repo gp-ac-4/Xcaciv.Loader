@@ -172,7 +172,12 @@ Avoid using `Helper` or `Utils` in class names, instead use descriptive names. W
 - Always implement IDisposable when dealing with event handlers or subscriptions
 - Prefer using async/await for asynchronous operations
 - Use latest C# features (e.g., records, pattern matching)
-- Use consistent naming conventions (PascalCase for public members, camelCase for private members)
+- Use consistent naming conventions:
+  - PascalCase for public members, methods, and properties
+  - camelCase for private fields and properties (no underscore prefix)
+  - Example: `private bool disposed;` not `private bool _disposed;`
+- When accessing static members on scalar types, use the capitalized type name
+  - Example: `String.Empty` not `string.Empty`, `Int32.MaxValue` not `int.MaxValue`
 - Use meaningful names for variables, methods, and classes
 - Use dependency injection for services and components
 - Use interfaces for service contracts and put them in a unique file

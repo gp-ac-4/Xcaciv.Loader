@@ -6,10 +6,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Security;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+
 using Xcaciv.Loader.Exceptions;
 
 namespace Xcaciv.Loader;
@@ -40,8 +39,6 @@ public class AssemblyContext : IAssemblyContext
     
     // Currently active list of forbidden directories
     private static string[] ForbiddenDirectories = DefaultForbiddenDirectories;
-    
-    private static readonly Regex FileExtensionRegex = new(@"\.(dll|exe)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     /// <summary>
     /// Flag indicating if strict directory restriction mode is enabled
@@ -80,7 +77,7 @@ public class AssemblyContext : IAssemblyContext
     private AssemblyName? assemblyName;
     
     /// <summary>
-    /// string name for refrence
+    /// string name for reference
     /// </summary>
     public string FullAssemblyName => this.assemblyName?.FullName ?? String.Empty;
     
@@ -129,7 +126,7 @@ public class AssemblyContext : IAssemblyContext
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath), "Assembly file path cannot be null or empty");
         this.BasePathRestriction = basePathRestriction;
         this.FilePath = VerifyPath(filePath, this.BasePathRestriction);
-        this.setLoadContext(fullName ?? String.Empty, isCollectible);
+        this.SetLoadContext(fullName ?? String.Empty, isCollectible);
     }
 
     /// <summary>
@@ -143,7 +140,7 @@ public class AssemblyContext : IAssemblyContext
         this.FilePath = String.Empty;
         this.BasePathRestriction = basePathRestriction;
         this.assemblyName = assemblyName ?? throw new ArgumentNullException(nameof(assemblyName), "Assembly name cannot be null");
-        this.setLoadContext(this.assemblyName.FullName, isCollectible);
+        this.SetLoadContext(this.assemblyName.FullName, isCollectible);
     }
     
     /// <summary>
@@ -151,7 +148,7 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <param name="fullName"></param>
     /// <param name="isCollectible"></param>
-    protected void setLoadContext(string fullName, bool isCollectible) 
+    protected void SetLoadContext(string fullName, bool isCollectible) 
     {
         loadContext = new AssemblyLoadContext(fullName, isCollectible);
         this.loadContext.Resolving += LoadContext_Resolving;
@@ -168,14 +165,14 @@ public class AssemblyContext : IAssemblyContext
     {
         if (String.IsNullOrEmpty(this.FilePath)) return default;
 
-        String filePath = Path.GetDirectoryName(this.FilePath) ?? String.Empty;
+        var filePath = Path.GetDirectoryName(this.FilePath) ?? String.Empty;
         var resolvedPath = (new AssemblyDependencyResolver(filePath)).ResolveAssemblyToPath(name);
         if (!String.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
         {
             return LoadFromPath(context, resolvedPath);
         }
 
-        String manualPath = Path.Combine(filePath, name.Name + ".dll");
+        var manualPath = Path.Combine(filePath, name.Name + ".dll");
         if (File.Exists(manualPath))
         {
             return LoadFromPath(context, manualPath);
@@ -205,7 +202,7 @@ public class AssemblyContext : IAssemblyContext
     /// <exception cref="InvalidOperationException">Thrown when the load context is not set</exception>
     protected void ValidateLoadContext()
     {
-        if (this.loadContext == null)
+        if (this.loadContext is null)
         {
             throw new InvalidOperationException("Load context is not set. Make sure initialization was completed successfully.");
         }
@@ -246,9 +243,9 @@ public class AssemblyContext : IAssemblyContext
         
         try
         {
-            Assembly? loadedAssembly = this.loadContext!.LoadFromAssemblyPath(this.FilePath);
+            var loadedAssembly = this.loadContext!.LoadFromAssemblyPath(this.FilePath);
 
-            if (loadedAssembly != null)
+            if (loadedAssembly is not null)
             {
                 this.assemblyName = loadedAssembly.GetName();
                 this.isLoaded = true;
@@ -277,15 +274,15 @@ public class AssemblyContext : IAssemblyContext
         ThrowIfDisposed();
         ValidateLoadContext();
         
-        if (this.assemblyName == null)
+        if (this.assemblyName is null)
         {
             throw new InvalidOperationException("Cannot load assembly: Assembly name is not set");
         }
         
         try
         {
-            Assembly? loadedAssembly = this.loadContext!.LoadFromAssemblyName(this.assemblyName);
-            if (loadedAssembly != null)
+            var loadedAssembly = this.loadContext!.LoadFromAssemblyName(this.assemblyName);
+            if (loadedAssembly is not null)
             {
                 this.FilePath = VerifyPath(loadedAssembly.Location);
                 this.isLoaded = true;
@@ -311,13 +308,13 @@ public class AssemblyContext : IAssemblyContext
     /// <exception cref="FileNotFoundException">Thrown when the assembly file cannot be found</exception>
     /// <exception cref="BadImageFormatException">Thrown when the file is not a valid assembly</exception>
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic assembly loading is intrinsic to this library")]
-    protected Assembly? loadAssembly()
+    protected Assembly? LoadAssembly()
     {
         ThrowIfDisposed();
         ValidateLoadContext();
 
         // this assembly is already loaded
-        if (assembly != null)
+        if (assembly is not null)
         {
             return assembly;
         }
@@ -332,7 +329,7 @@ public class AssemblyContext : IAssemblyContext
         {
             assembly = LoadFromPath();
         }
-        else if (this.assemblyName != null)
+        else if (this.assemblyName is not null)
         {
             assembly = LoadFromName();
         }
@@ -350,7 +347,7 @@ public class AssemblyContext : IAssemblyContext
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
     /// <param name="className">The name of the class to instantiate</param>
-    /// <returns>A refrence to the newly created object</returns>
+    /// <returns>A reference to the newly created object</returns>
     /// <exception cref="InvalidOperationException">Thrown when the assembly cannot be loaded</exception>
     /// <exception cref="FileNotFoundException">Thrown when the assembly file doesn't exist</exception>
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type loading is intrinsic to this library")]
@@ -358,7 +355,7 @@ public class AssemblyContext : IAssemblyContext
     {
         ThrowIfDisposed();
         
-        if (string.IsNullOrEmpty(className))
+        if (String.IsNullOrEmpty(className))
         {
             throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
         }
@@ -370,8 +367,8 @@ public class AssemblyContext : IAssemblyContext
 
         try
         {
-            var assembly = this.loadAssembly();
-            if (assembly == null)
+            var assembly = this.LoadAssembly();
+            if (assembly is null)
             {
                 return null;
             }
@@ -380,7 +377,7 @@ public class AssemblyContext : IAssemblyContext
 
             var instanceType = this.loadContext?.Assemblies.SelectMany(o => o.GetTypes()).FirstOrDefault(t => t.FullName?.EndsWith(className) == true);
 
-            return (instanceType == null) ? null : Activator.CreateInstance(instanceType);
+            return (instanceType is null) ? null : Activator.CreateInstance(instanceType);
         }
         catch (FileNotFoundException)
         {
@@ -401,7 +398,7 @@ public class AssemblyContext : IAssemblyContext
     /// If the class does not exist in this assembly a null object is returned.
     /// </summary>
     /// <param name="className">The name of the class to instantiate</param>
-    /// <returns>A refrence to the newly created object</returns>
+    /// <returns>A reference to the newly created object</returns>
     /// <exception cref="InvalidOperationException">Thrown when the assembly cannot be loaded</exception>
     /// <exception cref="TypeNotFoundException">Thrown when the specified class type is not found</exception>
     /// <exception cref="TypeLoadException">Thrown when there's an error loading the type</exception>
@@ -410,7 +407,7 @@ public class AssemblyContext : IAssemblyContext
     {
         ThrowIfDisposed();
         
-        if (string.IsNullOrEmpty(className))
+        if (String.IsNullOrEmpty(className))
         {
             throw new ArgumentNullException(nameof(className), "Class name cannot be null or empty");
         }
@@ -424,15 +421,15 @@ public class AssemblyContext : IAssemblyContext
         {
             if (!className.Contains('.')) className = '.' + className;
             
-            var assembly = this.loadAssembly();
-            if (assembly == null)
+            var assembly = this.LoadAssembly();
+            if (assembly is null)
             {
                 throw new InvalidOperationException($"Failed to load assembly for creating instance of '{className}'");
             }
             
             var instanceType = assembly.GetTypes()?.FirstOrDefault(o => o.FullName?.EndsWith(className) == true);
 
-            if (instanceType == null)
+            if (instanceType is null)
             {
                 throw new TypeNotFoundException(className, assembly.FullName ?? "Unknown Assembly");
             }
@@ -469,7 +466,7 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="instanceType"></param>
-    /// <returns>A refrence to the newly created object</returns>
+    /// <returns>A reference to the newly created object</returns>
     /// <exception cref="ArgumentNullException">Thrown when instanceType is null</exception>
     /// <exception cref="InvalidCastException">Thrown when the created object cannot be cast to T</exception>
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type activation is intrinsic to this library")]
@@ -477,7 +474,7 @@ public class AssemblyContext : IAssemblyContext
     {
         ThrowIfDisposed();
         
-        if (instanceType == null) throw new ArgumentNullException(nameof(instanceType), "Instance type cannot be null");
+        if (instanceType is null) throw new ArgumentNullException(nameof(instanceType), "Instance type cannot be null");
 
         try
         {
@@ -500,13 +497,13 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="instanceType"></param>
-    /// <returns>A refrence to the newly created object</returns>
+    /// <returns>A reference to the newly created object</returns>
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type activation is intrinsic to this library")]
     public static T ActivateInstance<T>(Type instanceType)
     {
         ArgumentNullException.ThrowIfNull(instanceType);
         
-        object? instance = Activator.CreateInstance(instanceType);
+        var instance = Activator.CreateInstance(instanceType);
         if (instance is null)
         {
             throw new InvalidOperationException($"Failed to create instance of {instanceType.FullName}");
@@ -523,7 +520,7 @@ public class AssemblyContext : IAssemblyContext
     public IEnumerable<Type>? GetTypes()
     {
         ThrowIfDisposed();
-        return this.loadAssembly()?.GetTypes();
+        return this.LoadAssembly()?.GetTypes();
     }
     
     /// <summary>
@@ -535,7 +532,7 @@ public class AssemblyContext : IAssemblyContext
     public IEnumerable<Type>? GetTypes(Type baseType)
     {
         ThrowIfDisposed();
-        return this.loadAssembly()?.GetTypes()?.Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
+        return this.LoadAssembly()?.GetTypes()?.Where(o => baseType.IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract);
     }
     
     /// <summary>
@@ -546,7 +543,7 @@ public class AssemblyContext : IAssemblyContext
     public IEnumerable<Type> GetTypes<T>()
     {
         ThrowIfDisposed();
-        return this.loadAssembly()?.GetTypes()?.Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? [];
+        return this.LoadAssembly()?.GetTypes()?.Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? [];
     }
 
     /// <summary>
@@ -566,7 +563,7 @@ public class AssemblyContext : IAssemblyContext
     public Version GetVersion()
     {
         ThrowIfDisposed();
-        return this.loadAssembly()?.GetName()?.Version ?? new Version();
+        return this.LoadAssembly()?.GetName()?.Version ?? new Version();
     }
     
     /// <summary>
@@ -599,7 +596,7 @@ public class AssemblyContext : IAssemblyContext
             // Check file extension - only allow .dll or .exe, but be lenient in test scenarios
             // In production, we'd want to strictly enforce this
             var extension = Path.GetExtension(fullFilePath);
-            if (!string.IsNullOrEmpty(extension) && 
+            if (!String.IsNullOrEmpty(extension) && 
                 !extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) && 
                 !extension.Equals(".exe", StringComparison.OrdinalIgnoreCase))
             {
@@ -620,7 +617,7 @@ public class AssemblyContext : IAssemblyContext
             string effectiveBasePathRestriction;
             if (basePathRestriction == "*")
             {
-                effectiveBasePathRestriction = Path.GetDirectoryName(fullFilePath) ?? string.Empty;
+                effectiveBasePathRestriction = Path.GetDirectoryName(fullFilePath) ?? String.Empty;
             }
             else
             {
@@ -628,7 +625,7 @@ public class AssemblyContext : IAssemblyContext
             }
 
             // Validate base path restriction
-            if (string.IsNullOrEmpty(effectiveBasePathRestriction))
+            if (String.IsNullOrEmpty(effectiveBasePathRestriction))
             {
                 throw new ArgumentOutOfRangeException(nameof(basePathRestriction), 
                     $"Invalid base path restriction. Base path cannot be empty.");
@@ -650,10 +647,20 @@ public class AssemblyContext : IAssemblyContext
 
             return fullFilePath;
         }
-        catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is PathTooLongException || 
-                                  ex is NotSupportedException)
+        catch (UnauthorizedAccessException ex)
         {
-            // Convert various path-related exceptions to a more meaningful SecurityException
+            throw new SecurityException($"Unauthorized access to path: {filePath}", ex);
+        }
+        catch (PathTooLongException ex)
+        {
+            throw new SecurityException($"Path too long: {filePath}", ex);
+        }
+        catch (NotSupportedException ex)
+        {
+            throw new SecurityException($"Path format not supported: {filePath}", ex);
+        }
+        catch (IOException ex)
+        {
             throw new SecurityException($"Invalid or inaccessible path: {filePath}", ex);
         }
     }
@@ -672,7 +679,7 @@ public class AssemblyContext : IAssemblyContext
         {
             lock (syncLock)
             {
-                if (this.loadContext == null) return false;
+                if (this.loadContext is null) return false;
                 
                 this.assembly = null;
                 var context = this.loadContext;
@@ -710,7 +717,7 @@ public class AssemblyContext : IAssemblyContext
                 {
                     lock (syncLock)
                     {
-                        if (this.loadContext == null) return false;
+                        if (this.loadContext is null) return false;
                         
                         this.assembly = null;
                         var context = this.loadContext;
