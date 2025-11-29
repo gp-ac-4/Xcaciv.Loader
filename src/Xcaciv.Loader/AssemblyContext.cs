@@ -216,6 +216,45 @@ public class AssemblyContext : IAssemblyContext
     public AssemblyIntegrityVerifier? IntegrityVerifier { get; init; }
 
     /// <summary>
+    /// Maximum time allowed for assembly loading operations before timing out.
+    /// Default is 30 seconds. Set to <see cref="Timeout.InfiniteTimeSpan"/> to disable timeout.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>Purpose:</strong> Prevents indefinite hangs when loading problematic assemblies.</para>
+    /// <para><strong>Default:</strong> 30 seconds (reasonable for most scenarios)</para>
+    /// <para><strong>Scenarios Protected:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description>Corrupted assemblies with malformed metadata</description></item>
+    ///   <item><description>Network-mounted paths with high latency or connectivity issues</description></item>
+    ///   <item><description>Assemblies with slow static initializers</description></item>
+    ///   <item><description>I/O bottlenecks or disk issues</description></item>
+    /// </list>
+    /// <para><strong>Disabling Timeout:</strong> Set to <c>Timeout.InfiniteTimeSpan</c> to wait indefinitely.</para>
+    /// <para><strong>Performance Note:</strong> Uses <see cref="Task.Run"/> when timeout is enabled, 
+    /// which adds minimal thread pool overhead but provides protection against hangs.</para>
+    /// </remarks>
+    /// <example>
+    /// <code>
+    /// // Default 30-second timeout
+    /// var context1 = new AssemblyContext(pluginPath, basePathRestriction: pluginDir);
+    /// 
+    /// // Custom 60-second timeout for slow network paths
+    /// var context2 = new AssemblyContext(pluginPath, basePathRestriction: pluginDir)
+    /// {
+    ///     LoadTimeout = TimeSpan.FromSeconds(60)
+    /// };
+    /// 
+    /// // Disable timeout (wait indefinitely)
+    /// var context3 = new AssemblyContext(pluginPath, basePathRestriction: pluginDir)
+    /// {
+    ///     LoadTimeout = Timeout.InfiniteTimeSpan
+    /// };
+    /// </code>
+    /// </example>
+    /// <exception cref="TimeoutException">Thrown when assembly loading exceeds the configured timeout</exception>
+    public TimeSpan LoadTimeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
     /// The directory path that the assembly is restricted to being loaded from.
     /// This provides a security boundary to prevent loading assemblies from arbitrary locations.
     /// </summary>
@@ -335,6 +374,12 @@ public class AssemblyContext : IAssemblyContext
     ///     basePathRestriction: pluginDir,
     ///     integrityVerifier: verifier);
     /// 
+    /// // With custom timeout for slow network paths
+    /// var context = new AssemblyContext(pluginPath, basePathRestriction: pluginDir)
+    /// {
+    ///     LoadTimeout = TimeSpan.FromSeconds(60)
+    /// };
+    /// 
     /// // SECURE: Default restriction to current directory
     /// var context = new AssemblyContext(pluginPath);
     /// 
@@ -345,6 +390,7 @@ public class AssemblyContext : IAssemblyContext
     /// <exception cref="ArgumentNullException">Thrown when filePath is null or empty</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the file path is outside the base path restriction</exception>
     /// <exception cref="SecurityException">Thrown when path validation fails or points to a restricted directory</exception>
+    /// <exception cref="TimeoutException">Thrown when assembly loading exceeds <see cref="LoadTimeout"/> (default 30 seconds)</exception>
     public AssemblyContext(
         string filePath, 
         string? fullName = null, 
@@ -508,6 +554,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns>Loaded assembly or null if loading failed</returns>
     /// <exception cref="FileNotFoundException">Thrown when the assembly file cannot be found</exception>
     /// <exception cref="BadImageFormatException">Thrown when the file is not a valid assembly</exception>
+    /// <exception cref="TimeoutException">Thrown when assembly loading exceeds the configured <see cref="LoadTimeout"/></exception>
     protected Assembly? LoadFromPath()
     {
         ThrowIfDisposed();
@@ -528,7 +575,48 @@ public class AssemblyContext : IAssemblyContext
             // Verify assembly integrity if enabled
             IntegrityVerifier?.VerifyIntegrity(this.FilePath);
             
-            var loadedAssembly = this.loadContext!.LoadFromAssemblyPath(this.FilePath);
+            Assembly? loadedAssembly;
+            
+            // Apply timeout protection if enabled
+            if (LoadTimeout == Timeout.InfiniteTimeSpan)
+            {
+                // No timeout - direct synchronous load
+                loadedAssembly = this.loadContext!.LoadFromAssemblyPath(this.FilePath);
+            }
+            else
+            {
+                // Timeout enabled - wrap in Task with cancellation
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(disposalTokenSource.Token);
+                cts.CancelAfter(LoadTimeout);
+                
+                try
+                {
+                    var loadTask = Task.Run(() => 
+                        this.loadContext!.LoadFromAssemblyPath(this.FilePath), 
+                        cts.Token);
+                    
+                    if (!loadTask.Wait(LoadTimeout, cts.Token))
+                    {
+                        throw new TimeoutException(
+                            $"Assembly loading timed out after {LoadTimeout.TotalSeconds:F1} seconds: {this.FilePath}");
+                    }
+                    
+                    loadedAssembly = loadTask.Result;
+                }
+                catch (OperationCanceledException) when (cts.Token.IsCancellationRequested && !disposalTokenSource.Token.IsCancellationRequested)
+                {
+                    // Timeout occurred (not disposal)
+                    throw new TimeoutException(
+                        $"Assembly loading was cancelled due to timeout ({LoadTimeout.TotalSeconds:F1}s): {this.FilePath}");
+                }
+                catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+                {
+                    // Task.Wait wraps OperationCanceledException in AggregateException
+                    throw new TimeoutException(
+                        $"Assembly loading was cancelled due to timeout ({LoadTimeout.TotalSeconds:F1}s): {this.FilePath}", 
+                        ex.InnerException);
+                }
+            }
 
             if (loadedAssembly is not null)
             {
@@ -547,6 +635,12 @@ public class AssemblyContext : IAssemblyContext
         {
             // Integrity verification failures are SecurityExceptions
             AssemblyLoadFailed?.Invoke(this.FilePath, ex);
+            throw;
+        }
+        catch (TimeoutException)
+        {
+            // Re-throw timeout exceptions with event
+            AssemblyLoadFailed?.Invoke(this.FilePath, new TimeoutException($"Timeout loading assembly: {this.FilePath}"));
             throw;
         }
         catch (FileLoadException ex)
