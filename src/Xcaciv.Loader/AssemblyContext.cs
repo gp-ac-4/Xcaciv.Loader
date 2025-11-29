@@ -755,7 +755,7 @@ public class AssemblyContext : IAssemblyContext
     }
     
     /// <summary>
-    /// list types that implement or extend a base type
+    /// list types that implement or extend a base type T
     /// </summary>
     /// <returns></returns>
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
@@ -766,15 +766,21 @@ public class AssemblyContext : IAssemblyContext
     }
 
     /// <summary>
-    /// list types that implement or extend a base type
+    /// Gets all loaded types in the current AppDomain that implement or extend type T.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>Collection of concrete types that implement or extend T</returns>
+    /// <remarks>
+    /// <strong>DEPRECATED:</strong> This method has been moved to <see cref="AssemblyScanner.GetLoadedTypes{T}"/>.
+    /// Use AssemblyScanner.GetLoadedTypes&lt;T&gt;() instead for better organization and separation of concerns.
+    /// This method will be removed in v3.0.0.
+    /// </remarks>
+    [Obsolete("Use AssemblyScanner.GetLoadedTypes<T>() instead. This method will be removed in v3.0.0.", false)]
     [UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic type discovery is intrinsic to this library")]
     public static IEnumerable<Type> GetLoadedTypes<T>()
     {
-        return AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes()).Where(o => typeof(T).IsAssignableFrom(o) && !o.IsInterface && !o.IsAbstract) ?? [];
+        return AssemblyScanner.GetLoadedTypes<T>();
     }
-
+    
     /// <summary>
     /// return assembly version
     /// </summary>
