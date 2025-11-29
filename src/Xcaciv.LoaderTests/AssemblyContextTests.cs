@@ -13,8 +13,8 @@ namespace Xcaciv.Loader.Tests
     public class AssemblyContextTests
     {
         private ITestOutputHelper _testOutput;
-        private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\{1}\net10.0\zTestAssembly.dll";
-        private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\{1}\net10.0\zTestDependentAssembly.dll";
+        private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\{1}\net8.0\zTestAssembly.dll";
+        private string dependentDllPath = @"..\..\..\..\zTestDependentAssembly\bin\{1}\net8.0\zTestDependentAssembly.dll";
 
         public AssemblyContextTests(ITestOutputHelper output)
         {
@@ -28,8 +28,6 @@ namespace Xcaciv.Loader.Tests
             this.simpleDllPath = simpleDllPath.Replace("{1}", "Release");
             this.dependentDllPath = dependentDllPath.Replace("{1}", "Release");
 #endif
-            this.simpleDllPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, this.simpleDllPath));
-            this.dependentDllPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, this.dependentDllPath));
         }
 
         [Fact()]

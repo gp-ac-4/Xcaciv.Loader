@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <!-- Enable .NET 10 builds by default across the repository -->
-    <UseNet10>true</UseNet10>
-  </PropertyGroup>
-</Project>
