@@ -242,9 +242,22 @@ public class AssemblyContext : IAssemblyContext
         }
         catch (SecurityException ex)
         {
-            // Raise security violation event instead of silent failure
+            // Raise security violation event for audit trail
             SecurityViolation?.Invoke(path, ex.Message);
-            return default;
+            // Re-throw to prevent silent failure and maintain error transparency
+            throw;
+        }
+        catch (FileNotFoundException ex)
+        {
+            // Raise load failure event and re-throw
+            AssemblyLoadFailed?.Invoke(path, ex);
+            throw;
+        }
+        catch (BadImageFormatException ex)
+        {
+            // Raise load failure event and re-throw
+            AssemblyLoadFailed?.Invoke(path, ex);
+            throw;
         }
     }
 
@@ -454,9 +467,21 @@ public class AssemblyContext : IAssemblyContext
         {
             throw new InvalidOperationException($"Failed to load types from assembly: {ex.Message}", ex);
         }
-        catch (Exception ex) when (ex is not ArgumentNullException)
+        catch (MissingMethodException ex)
         {
-            throw new InvalidOperationException($"Failed to create instance of '{className}': {ex.Message}", ex);
+            throw new InvalidOperationException($"Failed to create instance of '{className}': Type does not have a parameterless constructor", ex);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': Constructor threw an exception", ex);
+        }
+        catch (MemberAccessException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': Cannot access constructor", ex);
+        }
+        catch (TypeLoadException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': Type could not be loaded", ex);
         }
     }
     
@@ -501,7 +526,6 @@ public class AssemblyContext : IAssemblyContext
                 throw new TypeNotFoundException(className, assembly.FullName ?? "Unknown Assembly");
             }
 
-            // Consumer is expected to handle any exceptions
             return ActivateInstance<T>(instanceType);
         }
         catch (FileNotFoundException)
@@ -520,9 +544,25 @@ public class AssemblyContext : IAssemblyContext
         {
             throw new InvalidCastException($"Cannot convert instance of {className} to type {typeof(T).FullName}", ex);
         }
-        catch (Exception ex) when (ex is not ArgumentNullException && ex is not InvalidOperationException && ex is not TypeLoadException)
+        catch (InvalidOperationException)
         {
-            throw new InvalidOperationException($"Failed to create instance of '{className}': {ex.Message}", ex);
+            throw;
+        }
+        catch (MissingMethodException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': Type does not have a parameterless constructor", ex);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': Constructor threw an exception", ex);
+        }
+        catch (MemberAccessException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{className}': Cannot access constructor", ex);
+        }
+        catch (TypeLoadException)
+        {
+            throw;
         }
     }
     
@@ -544,16 +584,23 @@ public class AssemblyContext : IAssemblyContext
 
         try
         {
-            // Consumer is expected to handle any exceptions
             return ActivateInstance<T>(instanceType);
         }
         catch (InvalidCastException ex)
         {
             throw new InvalidCastException($"Cannot convert instance of {instanceType.FullName} to type {typeof(T).FullName}", ex);
         }
-        catch (Exception ex) when (ex is not ArgumentNullException)
+        catch (MissingMethodException ex)
         {
-            throw new InvalidOperationException($"Failed to create instance of '{instanceType.FullName}': {ex.Message}", ex);
+            throw new InvalidOperationException($"Failed to create instance of '{instanceType.FullName}': Type does not have a parameterless constructor", ex);
+        }
+        catch (TargetInvocationException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{instanceType.FullName}': Constructor threw an exception", ex);
+        }
+        catch (MemberAccessException ex)
+        {
+            throw new InvalidOperationException($"Failed to create instance of '{instanceType.FullName}': Cannot access constructor", ex);
         }
     }
     
