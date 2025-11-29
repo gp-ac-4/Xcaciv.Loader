@@ -1,11 +1,25 @@
-
 # Copilot Instructions
 
 The github repo is xcaciv/Xcaciv.Loader and the primary branch that I work off of is main.
 
 Never stub or mock functionality unless explicitly asked to do so.
-Don't use any emojis in your responses. Extended ASCII is fine.
 Your terminal is PowerShell, only use powershell syntax.
+
+## Formatting and Style
+
+- Do not use emojis in code, documentation, or responses. Use only standard markdown formatting.
+- Extended ASCII characters are acceptable where appropriate.
+- Use standard markdown headers, lists, tables, and code blocks for formatting.
+
+## Naming Conventions
+
+- Never use the term "Helper" or "Utils" in class names. Use descriptive, intent-revealing names instead.
+- Examples:
+  - BAD: `PathHelper`, `StringHelper`, `ValidationUtils`
+  - GOOD: `PathValidator`, `StringFormatter`, `InputValidator`
+- Before extracting functionality to a separate class, consider if it belongs closer to where it is used.
+- Follow the Single Responsibility Principle, but avoid over-emphasis of DRY to the detriment of maintainability.
+- Prioritize analyzability: code should be easy to understand and trace, even if it means some controlled duplication.
 
 This document includes guiding principles for .NET development, based on the **Framework for Integrating Application Security into Software Engineering (FIASSE)** and the **Securable Software Engineering Model (SSEM)**. The goal is to influence code generation on a fundamental level to produce software that is inherently "securable", adaptable and resilient to evolving threats.
 
@@ -266,4 +280,4 @@ Create a "Compact" build configuration with the following properties:
 - Use `is null` / `is not null` for null checks.
 - Access static members with capitalized type names (e.g., `String.Empty`).
 - Flag spelling errors in documentation and project descriptions.
-- Do not suggest combining lines of code if it does not improve functionality.
+- Do not suggest combining lines of code if it does not improve functionality
