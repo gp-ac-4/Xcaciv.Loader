@@ -60,6 +60,45 @@ public class AssemblyContext : IAssemblyContext
     /// </summary>
     private readonly CancellationTokenSource disposalTokenSource = new();
 
+    // Event handlers for audit trail and transparency (SSEM compliance)
+    
+    /// <summary>
+    /// Raised when an assembly is successfully loaded. Provides audit trail of assembly loading operations.
+    /// Parameters: (filePath, assemblyName, version)
+    /// </summary>
+    public event Action<string, string, Version?>? AssemblyLoaded;
+    
+    /// <summary>
+    /// Raised when assembly loading fails. Provides transparency for troubleshooting.
+    /// Parameters: (filePath, exception)
+    /// </summary>
+    public event Action<string, Exception>? AssemblyLoadFailed;
+    
+    /// <summary>
+    /// Raised when an assembly is successfully unloaded.
+    /// Parameters: (filePath, success)
+    /// </summary>
+    public event Action<string, bool>? AssemblyUnloaded;
+    
+    /// <summary>
+    /// Raised when a security violation is detected (e.g., attempting to load from restricted paths).
+    /// Provides accountability for security events.
+    /// Parameters: (filePath, reason)
+    /// </summary>
+    public event Action<string, string>? SecurityViolation;
+    
+    /// <summary>
+    /// Raised when a dependency is successfully resolved.
+    /// Parameters: (dependencyName, resolvedPath)
+    /// </summary>
+    public event Action<string, string>? DependencyResolved;
+    
+    /// <summary>
+    /// Raised when wildcard path restriction (*) is used. This is a security warning event.
+    /// Parameters: (filePath)
+    /// </summary>
+    public event Action<string>? WildcardPathRestrictionUsed;
+
     /// <summary>
     /// the directory path that the assembly is restricted to being loaded from
     /// Made init-only as it is set only during construction and should not change afterward
@@ -119,7 +158,11 @@ public class AssemblyContext : IAssemblyContext
     /// <param name="filePath"></param>
     /// <param name="fullName"></param>
     /// <param name="isCollectible"></param>
-    /// <param name="basePathRestriction">the directory path that the assembly is restricted to being loaded from</param>
+    /// <param name="basePathRestriction">
+    /// The directory path that the assembly is restricted to being loaded from.
+    /// WARNING: Use "*" ONLY in controlled test environments. 
+    /// In production, ALWAYS specify an explicit directory path to prevent arbitrary code execution.
+    /// </param>
     /// <exception cref="ArgumentNullException"></exception>
     public AssemblyContext(string filePath, string? fullName = null, bool isCollectible = true, string basePathRestriction = ".")
     {
@@ -127,6 +170,12 @@ public class AssemblyContext : IAssemblyContext
         this.BasePathRestriction = basePathRestriction;
         this.FilePath = VerifyPath(filePath, this.BasePathRestriction);
         this.SetLoadContext(fullName ?? String.Empty, isCollectible);
+        
+        // Raise security warning if wildcard is used
+        if (basePathRestriction == "*")
+        {
+            WildcardPathRestrictionUsed?.Invoke(this.FilePath);
+        }
     }
 
     /// <summary>
@@ -169,19 +218,21 @@ public class AssemblyContext : IAssemblyContext
         var resolvedPath = (new AssemblyDependencyResolver(filePath)).ResolveAssemblyToPath(name);
         if (!String.IsNullOrEmpty(resolvedPath) && File.Exists(resolvedPath))
         {
+            DependencyResolved?.Invoke(name.Name ?? "Unknown", resolvedPath);
             return LoadFromPath(context, resolvedPath);
         }
 
         var manualPath = Path.Combine(filePath, name.Name + ".dll");
         if (File.Exists(manualPath))
         {
+            DependencyResolved?.Invoke(name.Name ?? "Unknown", manualPath);
             return LoadFromPath(context, manualPath);
         }
 
         return default;
     }
 
-    private static Assembly? LoadFromPath(AssemblyLoadContext context, string path)
+    private Assembly? LoadFromPath(AssemblyLoadContext context, string path)
     {
         try
         {
@@ -191,7 +242,8 @@ public class AssemblyContext : IAssemblyContext
         }
         catch (SecurityException ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Security restriction prevented loading assembly from {path}: {ex.Message}");
+            // Raise security violation event instead of silent failure
+            SecurityViolation?.Invoke(path, ex.Message);
             return default;
         }
     }
@@ -249,15 +301,23 @@ public class AssemblyContext : IAssemblyContext
             {
                 this.assemblyName = loadedAssembly.GetName();
                 this.isLoaded = true;
+                
+                // Raise success event
+                AssemblyLoaded?.Invoke(
+                    this.FilePath, 
+                    loadedAssembly.FullName ?? "Unknown", 
+                    loadedAssembly.GetName().Version);
             }
             return loadedAssembly;
         }
         catch (FileLoadException ex)
         {
+            AssemblyLoadFailed?.Invoke(this.FilePath, ex);
             throw new FileLoadException($"Failed to load assembly from path: {this.FilePath}", ex);
         }
         catch (BadImageFormatException ex)
         {
+            AssemblyLoadFailed?.Invoke(this.FilePath, ex);
             throw new BadImageFormatException($"The file at path '{this.FilePath}' is not a valid assembly", ex);
         }
     }
@@ -286,15 +346,23 @@ public class AssemblyContext : IAssemblyContext
             {
                 this.FilePath = VerifyPath(loadedAssembly.Location);
                 this.isLoaded = true;
+                
+                // Raise success event
+                AssemblyLoaded?.Invoke(
+                    this.FilePath, 
+                    loadedAssembly.FullName ?? "Unknown", 
+                    loadedAssembly.GetName().Version);
             }
             return loadedAssembly;
         }
         catch (FileNotFoundException ex)
         {
+            AssemblyLoadFailed?.Invoke(this.assemblyName.FullName ?? "Unknown", ex);
             throw new FileNotFoundException($"Assembly '{this.assemblyName.FullName}' could not be found", ex);
         }
         catch (ArgumentException ex)
         {
+            AssemblyLoadFailed?.Invoke(this.assemblyName.FullName ?? "Unknown", ex);
             throw new ArgumentException($"Invalid assembly name: {this.assemblyName.FullName}", ex);
         }
     }
@@ -313,12 +381,11 @@ public class AssemblyContext : IAssemblyContext
         ThrowIfDisposed();
         ValidateLoadContext();
 
-        // this assembly is already loaded
         if (assembly is not null)
         {
             return assembly;
         }
-        else if (this.isLoaded) // the assembly may be in memory already
+        else if (this.isLoaded)
         {
             assembly = this.loadContext!.Assemblies.FirstOrDefault(o => o.FullName == this.assemblyName?.FullName);
             this.assemblyName = assembly?.GetName();
@@ -381,7 +448,7 @@ public class AssemblyContext : IAssemblyContext
         }
         catch (FileNotFoundException)
         {
-            throw; // Rethrow file not found exceptions directly
+            throw;
         }
         catch (ReflectionTypeLoadException ex)
         {
@@ -439,7 +506,7 @@ public class AssemblyContext : IAssemblyContext
         }
         catch (FileNotFoundException)
         {
-            throw; // Rethrow file not found exceptions directly
+            throw;
         }
         catch (ReflectionTypeLoadException ex)
         {
@@ -447,8 +514,7 @@ public class AssemblyContext : IAssemblyContext
         }
         catch (TypeNotFoundException)
         {
-            // Create an exit for TypeNotFoundException to preserve stack trace
-            throw; // Re-throw the TypeNotFoundException we created
+            throw;
         }
         catch (InvalidCastException ex)
         {
@@ -671,29 +737,36 @@ public class AssemblyContext : IAssemblyContext
     /// <returns>true if unload was successful, false otherwise</returns>
     public bool Unload()
     {
-        if (disposed) return false; // Already disposed
+        if (disposed) return false;
         
-        if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) return false;
-
-        try
+        lock (syncLock)
         {
-            lock (syncLock)
+            if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) 
+                return false;
+            
+            if (this.loadContext is null) return false;
+            
+            try
             {
-                if (this.loadContext is null) return false;
-                
                 this.assembly = null;
                 var context = this.loadContext;
                 this.loadContext = null;
                 context?.Unload();
 
                 this.isLoaded = false;
+                
+                // Raise success event
+                AssemblyUnloaded?.Invoke(this.FilePath, true);
                 return true;
             }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine("**" + ex.Message);
-            return false;
+            catch (Exception ex)
+            {
+                // Raise failure event
+                AssemblyUnloaded?.Invoke(this.FilePath, false);
+                throw new InvalidOperationException(
+                    $"Failed to unload assembly from {this.FilePath}. The assembly may still be referenced by active objects.", 
+                    ex);
+            }
         }
     }
     
@@ -703,7 +776,7 @@ public class AssemblyContext : IAssemblyContext
     /// <returns>A task that completes when the unload operation is done</returns>
     public async Task<bool> UnloadAsync()
     {
-        if (disposed) return false; // Already disposed
+        if (disposed) return false;
         
         if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) return false;
         
@@ -713,31 +786,38 @@ public class AssemblyContext : IAssemblyContext
             // to avoid blocking the calling thread
             return await Task.Run(() =>
             {
-                try
+                lock (syncLock)
                 {
-                    lock (syncLock)
+                    if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) 
+                        return false;
+                    
+                    if (this.loadContext is null) return false;
+                    
+                    try
                     {
-                        if (this.loadContext is null) return false;
-                        
                         this.assembly = null;
                         var context = this.loadContext;
                         this.loadContext = null;
                         context?.Unload();
 
                         this.isLoaded = false;
+                        
+                        // Raise success event
+                        AssemblyUnloaded?.Invoke(this.FilePath, true);
                         return true;
                     }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine("**" + ex.Message);
-                    return false;
+                    catch (Exception ex)
+                    {
+                        // Raise failure event
+                        AssemblyUnloaded?.Invoke(this.FilePath, false);
+                        throw new InvalidOperationException(
+                            $"Failed to unload assembly from {this.FilePath}", ex);
+                    }
                 }
             }, disposalTokenSource.Token);
         }
         catch (OperationCanceledException)
         {
-            // Operation was cancelled (likely during disposal)
             return false;
         }
     }
@@ -787,9 +867,9 @@ public class AssemblyContext : IAssemblyContext
         {
             await UnloadAsync().ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Diagnostics.Debug.WriteLine($"Error during async disposal: {ex.Message}");
+            // Exceptions are already raised via events
         }
         
         // Dispose other managed resources
