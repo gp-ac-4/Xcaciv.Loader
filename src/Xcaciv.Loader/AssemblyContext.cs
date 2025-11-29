@@ -38,40 +38,160 @@ public class AssemblyContext : IAssemblyContext
     // Event handlers for audit trail and transparency (SSEM compliance)
     
     /// <summary>
-    /// Raised when an assembly is successfully loaded. Provides audit trail of assembly loading operations.
-    /// Parameters: (filePath, assemblyName, version)
+    /// Raised when an assembly is successfully loaded into the context.
+    /// Provides an audit trail of assembly loading operations for security and diagnostic purposes.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Thread Safety:</strong> This event may be raised from any thread. Event handlers must be thread-safe.</para>
+    /// <para><strong>Timing:</strong> Raised immediately after successful LoadFromAssemblyPath or LoadFromAssemblyName.</para>
+    /// <para><strong>Parameters:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><c>filePath</c> (string): Full path to the loaded assembly file</description></item>
+    ///   <item><description><c>assemblyName</c> (string): Full assembly name including version and culture (e.g., "MyAssembly, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null")</description></item>
+    ///   <item><description><c>version</c> (Version?): Assembly version, or null if version information is unavailable</description></item>
+    /// </list>
+    /// <para><strong>Example:</strong></para>
+    /// <code>
+    /// context.AssemblyLoaded += (path, name, version) =>
+    /// {
+    ///     logger.LogInformation("Loaded {Name} v{Version} from {Path}", name, version, path);
+    /// };
+    /// </code>
+    /// </remarks>
     public event Action<string, string, Version?>? AssemblyLoaded;
     
     /// <summary>
-    /// Raised when assembly loading fails. Provides transparency for troubleshooting.
-    /// Parameters: (filePath, exception)
+    /// Raised when assembly loading fails.
+    /// Provides transparency for troubleshooting and monitors for potential security issues.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Thread Safety:</strong> This event may be raised from any thread. Event handlers must be thread-safe.</para>
+    /// <para><strong>Timing:</strong> Raised immediately after a failed assembly load attempt, before re-throwing the exception.</para>
+    /// <para><strong>Parameters:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><c>filePath</c> (string): Path or name of the assembly that failed to load</description></item>
+    ///   <item><description><c>exception</c> (Exception): The exception that caused the failure (FileNotFoundException, SecurityException, BadImageFormatException, etc.)</description></item>
+    /// </list>
+    /// <para><strong>Security Note:</strong> Monitor this event for repeated failures which may indicate attack attempts.</para>
+    /// <para><strong>Example:</strong></para>
+    /// <code>
+    /// context.AssemblyLoadFailed += (path, ex) =>
+    /// {
+    ///     logger.LogError(ex, "Failed to load assembly from {Path}: {Message}", path, ex.Message);
+    ///     securityMonitor.RecordLoadFailure(path, ex);
+    /// };
+    /// </code>
+    /// </remarks>
     public event Action<string, Exception>? AssemblyLoadFailed;
     
     /// <summary>
-    /// Raised when an assembly is successfully unloaded.
-    /// Parameters: (filePath, success)
+    /// Raised when an assembly is successfully unloaded from the context.
+    /// Provides transparency for resource management and diagnostic purposes.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Thread Safety:</strong> This event may be raised from any thread. Event handlers must be thread-safe.</para>
+    /// <para><strong>Timing:</strong> Raised after the unload attempt, whether successful or not.</para>
+    /// <para><strong>Parameters:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><c>filePath</c> (string): Path to the assembly that was unloaded (or attempted to unload)</description></item>
+    ///   <item><description><c>success</c> (bool): True if unload was successful, false if it failed</description></item>
+    /// </list>
+    /// <para><strong>Note:</strong> Failed unloads may indicate that objects from the assembly are still referenced.</para>
+    /// <para><strong>Example:</strong></para>
+    /// <code>
+    /// context.AssemblyUnloaded += (path, success) =>
+    /// {
+    ///     if (success)
+    ///         logger.LogInformation("Successfully unloaded {Path}", path);
+    ///     else
+    ///         logger.LogWarning("Failed to unload {Path} - objects may still be referenced", path);
+    /// };
+    /// </code>
+    /// </remarks>
     public event Action<string, bool>? AssemblyUnloaded;
     
     /// <summary>
-    /// Raised when a security violation is detected (e.g., attempting to load from restricted paths).
-    /// Provides accountability for security events.
-    /// Parameters: (filePath, reason)
+    /// Raised when a security violation is detected during assembly loading operations.
+    /// Provides accountability for security events and enables security monitoring.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Thread Safety:</strong> This event may be raised from any thread. Event handlers must be thread-safe.</para>
+    /// <para><strong>Timing:</strong> Raised immediately when a security violation is detected, before throwing SecurityException.</para>
+    /// <para><strong>Parameters:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><c>filePath</c> (string): Path that triggered the security violation</description></item>
+    ///   <item><description><c>reason</c> (string): Description of the security violation</description></item>
+    /// </list>
+    /// <para><strong>Security Critical:</strong> Always monitor this event in production. Violations may indicate:</para>
+    /// <list type="bullet">
+    ///   <item><description>Attempted loading from forbidden system directories</description></item>
+    ///   <item><description>Path traversal attack attempts</description></item>
+    ///   <item><description>Assembly integrity verification failures</description></item>
+    ///   <item><description>Configuration errors</description></item>
+    /// </list>
+    /// <para><strong>Example:</strong></para>
+    /// <code>
+    /// context.SecurityViolation += (path, reason) =>
+    /// {
+    ///     securityLogger.LogCritical(
+    ///         "SECURITY VIOLATION: {Reason} - Path: {Path}", 
+    ///         reason, path);
+    ///     securityMonitor.RaiseAlert("AssemblyLoadSecurityViolation", path, reason);
+    /// };
+    /// </code>
+    /// </remarks>
     public event Action<string, string>? SecurityViolation;
     
     /// <summary>
-    /// Raised when a dependency is successfully resolved.
-    /// Parameters: (dependencyName, resolvedPath)
+    /// Raised when a dependency assembly is successfully resolved and loaded.
+    /// Provides transparency for dependency resolution and aids in troubleshooting.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Thread Safety:</strong> This event may be raised from any thread. Event handlers must be thread-safe.</para>
+    /// <para><strong>Timing:</strong> Raised when AssemblyLoadContext.Resolving successfully locates and loads a dependency.</para>
+    /// <para><strong>Parameters:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><c>dependencyName</c> (string): Name of the dependency being resolved</description></item>
+    ///   <item><description><c>resolvedPath</c> (string): Full path where the dependency was found</description></item>
+    /// </list>
+    /// <para><strong>Note:</strong> This event helps track where dependencies are loaded from, useful for diagnosing version conflicts.</para>
+    /// <para><strong>Example:</strong></para>
+    /// <code>
+    /// context.DependencyResolved += (name, path) =>
+    /// {
+    ///     logger.LogDebug("Resolved dependency {Name} from {Path}", name, path);
+    /// };
+    /// </code>
+    /// </remarks>
     public event Action<string, string>? DependencyResolved;
     
     /// <summary>
-    /// Raised when wildcard path restriction (*) is used. This is a security warning event.
-    /// Parameters: (filePath)
+    /// Raised when wildcard path restriction (*) is used during context creation.
+    /// This is a security warning event indicating unrestricted assembly loading.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Thread Safety:</strong> This event is raised during construction on the calling thread.</para>
+    /// <para><strong>Timing:</strong> Raised immediately during AssemblyContext construction if basePathRestriction is "*".</para>
+    /// <para><strong>Parameters:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><c>filePath</c> (string): Path to the assembly being loaded without restriction</description></item>
+    /// </list>
+    /// <para><strong>Security Warning:</strong> Using wildcard (*) disables path restrictions and allows loading from ANY location.</para>
+    /// <list type="bullet">
+    ///   <item><description><strong>Production:</strong> NEVER use wildcard - always specify explicit paths</description></item>
+    ///   <item><description><strong>Testing:</strong> Wildcard is acceptable only in isolated test environments</description></item>
+    ///   <item><description><strong>Risk:</strong> Wildcard can lead to arbitrary code execution vulnerabilities</description></item>
+    /// </list>
+    /// <para><strong>Example:</strong></para>
+    /// <code>
+    /// context.WildcardPathRestrictionUsed += (path) =>
+    /// {
+    ///     securityLogger.LogWarning(
+    ///         "SECURITY WARNING: Wildcard path restriction used for {Path}. " +
+    ///         "This is UNSAFE in production environments.", path);
+    /// };
+    /// </code>
+    /// </remarks>
     public event Action<string>? WildcardPathRestrictionUsed;
 
     /// <summary>
