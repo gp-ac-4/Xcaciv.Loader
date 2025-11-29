@@ -85,6 +85,17 @@ public class AssemblyContext : IAssemblyContext
     public AssemblySecurityPolicy SecurityPolicy { get; init; }
 
     /// <summary>
+    /// Optional integrity verifier for cryptographic hash-based assembly validation.
+    /// When enabled, assemblies are verified against known hashes before loading.
+    /// </summary>
+    /// <remarks>
+    /// <para>If not specified, integrity verification is disabled (default).</para>
+    /// <para>Enable for defense-in-depth protection against tampered assemblies.</para>
+    /// <para>Use learning mode to automatically trust new assemblies on first load.</para>
+    /// </remarks>
+    public AssemblyIntegrityVerifier? IntegrityVerifier { get; init; }
+
+    /// <summary>
     /// The directory path that the assembly is restricted to being loaded from.
     /// This provides a security boundary to prevent loading assemblies from arbitrary locations.
     /// </summary>
@@ -181,23 +192,33 @@ public class AssemblyContext : IAssemblyContext
     /// Optional security policy to control forbidden directories. If not specified, uses <see cref="AssemblySecurityPolicy.Default"/>.
     /// Use <see cref="AssemblySecurityPolicy.Strict"/> for enhanced security.
     /// </param>
+    /// <param name="integrityVerifier">
+    /// Optional integrity verifier for hash-based assembly validation. If not specified, integrity verification is disabled.
+    /// </param>
     /// <example>
     /// <code>
-    /// // ? SECURE: Explicit path restriction with default security policy
+    /// // SECURE: Explicit path restriction with default security policy
     /// var context = new AssemblyContext(
     ///     pluginPath, 
     ///     basePathRestriction: Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins"));
     /// 
-    /// // ? SECURE: With strict security policy
+    /// // SECURE: With strict security policy
     /// var context = new AssemblyContext(
     ///     pluginPath,
     ///     basePathRestriction: pluginDir,
     ///     securityPolicy: AssemblySecurityPolicy.Strict);
     /// 
-    /// // ? SECURE: Default restriction to current directory
+    /// // SECURE: With integrity verification (learning mode)
+    /// var verifier = new AssemblyIntegrityVerifier(enabled: true, learningMode: true);
+    /// var context = new AssemblyContext(
+    ///     pluginPath,
+    ///     basePathRestriction: pluginDir,
+    ///     integrityVerifier: verifier);
+    /// 
+    /// // SECURE: Default restriction to current directory
     /// var context = new AssemblyContext(pluginPath);
     /// 
-    /// // ?? INSECURE: Wildcard allows loading from anywhere (TEST ONLY)
+    /// // INSECURE: Wildcard allows loading from anywhere (TEST ONLY)
     /// var context = new AssemblyContext(pluginPath, basePathRestriction: "*");
     /// </code>
     /// </example>
@@ -209,11 +230,13 @@ public class AssemblyContext : IAssemblyContext
         string? fullName = null, 
         bool isCollectible = true, 
         string basePathRestriction = ".",
-        AssemblySecurityPolicy? securityPolicy = null)
+        AssemblySecurityPolicy? securityPolicy = null,
+        AssemblyIntegrityVerifier? integrityVerifier = null)
     {
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath), "Assembly file path cannot be null or empty");
         
         this.SecurityPolicy = securityPolicy ?? AssemblySecurityPolicy.Default;
+        this.IntegrityVerifier = integrityVerifier;
         this.BasePathRestriction = basePathRestriction;
         this.FilePath = VerifyPath(filePath, this.BasePathRestriction, this.SecurityPolicy);
         this.SetLoadContext(fullName ?? String.Empty, isCollectible);
@@ -243,15 +266,20 @@ public class AssemblyContext : IAssemblyContext
     /// <param name="securityPolicy">
     /// Optional security policy to control forbidden directories. If not specified, uses <see cref="AssemblySecurityPolicy.Default"/>.
     /// </param>
+    /// <param name="integrityVerifier">
+    /// Optional integrity verifier for hash-based assembly validation. If not specified, integrity verification is disabled.
+    /// </param>
     /// <exception cref="ArgumentNullException">Thrown when assemblyName is null</exception>
     public AssemblyContext(
         AssemblyName assemblyName, 
         bool isCollectible = true, 
         string basePathRestriction = ".",
-        AssemblySecurityPolicy? securityPolicy = null) 
+        AssemblySecurityPolicy? securityPolicy = null,
+        AssemblyIntegrityVerifier? integrityVerifier = null) 
     {
         this.FilePath = String.Empty;
         this.SecurityPolicy = securityPolicy ?? AssemblySecurityPolicy.Default;
+        this.IntegrityVerifier = integrityVerifier;
         this.BasePathRestriction = basePathRestriction;
         this.assemblyName = assemblyName ?? throw new ArgumentNullException(nameof(assemblyName), "Assembly name cannot be null");
         this.SetLoadContext(this.assemblyName.FullName, isCollectible);
@@ -303,6 +331,10 @@ public class AssemblyContext : IAssemblyContext
         {
             // Verify the resolved path against security restrictions
             var verifiedPath = VerifyPath(path, "*", this.SecurityPolicy);
+            
+            // Verify assembly integrity if enabled
+            IntegrityVerifier?.VerifyIntegrity(verifiedPath);
+            
             return context.LoadFromAssemblyPath(verifiedPath);
         }
         catch (SecurityException ex)
@@ -373,6 +405,9 @@ public class AssemblyContext : IAssemblyContext
         
         try
         {
+            // Verify assembly integrity if enabled
+            IntegrityVerifier?.VerifyIntegrity(this.FilePath);
+            
             var loadedAssembly = this.loadContext!.LoadFromAssemblyPath(this.FilePath);
 
             if (loadedAssembly is not null)
@@ -387,6 +422,12 @@ public class AssemblyContext : IAssemblyContext
                     loadedAssembly.GetName().Version);
             }
             return loadedAssembly;
+        }
+        catch (SecurityException ex)
+        {
+            // Integrity verification failures are SecurityExceptions
+            AssemblyLoadFailed?.Invoke(this.FilePath, ex);
+            throw;
         }
         catch (FileLoadException ex)
         {

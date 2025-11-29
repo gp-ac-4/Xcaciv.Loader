@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `AssemblySecurityPolicy.Strict`: Enhanced restrictions for high-security environments
   - Support for custom forbidden directory lists
   - `SecurityPolicy` property on `AssemblyContext` for per-instance configuration
+- **Assembly Integrity Verification**: Optional cryptographic hash-based verification (disabled by default)
+  - `AssemblyIntegrityVerifier` class with learning and strict modes
+  - `AssemblyHashStore` for managing hashes with CSV persistence
+  - Support for SHA256, SHA384, and SHA512 hash algorithms
+  - Learning mode automatically trusts new assemblies on first load
+  - Strict mode only loads assemblies with known hashes
+  - Events for hash mismatches and hash learning
+  - Simple CSV file format (no external dependencies)
 - **Enhanced Exception Handling**: Specific exception types now caught and wrapped with context:
   - `MissingMethodException`: Type lacks parameterless constructor
   - `TargetInvocationException`: Constructor threw an exception
@@ -23,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Detailed examples of secure vs insecure patterns
   - Migration guide for deprecated APIs
   - Defense-in-depth security strategies
+  - Assembly integrity verification guide
 - **Audit Trail Events**: All security violations and dependency resolutions now raise events before throwing exceptions
 
 ### Changed

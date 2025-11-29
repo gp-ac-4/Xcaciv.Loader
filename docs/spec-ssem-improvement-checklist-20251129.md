@@ -78,8 +78,8 @@ Multiple methods use overly broad exception filtering like `catch (Exception ex)
 
 ---
 
-### ? TRUST-001: Add Assembly Signature/Hash Verification (Optional)
-**Status:** To Do (Optional Enhancement)  
+### ? TRUST-001: Add Assembly Signature/Hash Verification
+**Status:** ? **COMPLETED**  
 **SSEM Pillar:** Trustworthiness (Integrity)  
 **Priority:** Medium  
 **Effort:** High  
@@ -87,42 +87,65 @@ Multiple methods use overly broad exception filtering like `catch (Exception ex)
 **Issue:**  
 The library relies solely on file system permissions for assembly integrity. No cryptographic verification is performed to ensure assemblies haven't been tampered with.
 
-**Proposed Solution:**
-Add optional hash verification:
-```csharp
-public class AssemblyContext
-{
-    public string? ExpectedHash { get; init; }
-    public HashAlgorithm HashAlgorithm { get; init; } = HashAlgorithm.SHA256;
-    
-    private void VerifyAssemblyHash(string filePath)
-    {
-        if (String.IsNullOrEmpty(ExpectedHash)) return;
-        
-        using var sha = System.Security.Cryptography.SHA256.Create();
-        using var stream = File.OpenRead(filePath);
-        var hash = Convert.ToBase64String(sha.ComputeHash(stream));
-        
-        if (!hash.Equals(ExpectedHash, StringComparison.Ordinal))
-        {
-            var message = $"Assembly hash mismatch. Expected: {ExpectedHash}, Actual: {hash}";
-            SecurityViolation?.Invoke(filePath, message);
-            throw new SecurityException(message);
-        }
-    }
-}
-```
+**Implementation Summary:**
+- Created `AssemblyHashStore` class for managing assembly hashes with CSV persistence
+- Created `AssemblyIntegrityVerifier` class with learning and strict modes
+- Integrated verification into `AssemblyContext` as optional feature (disabled by default)
+- Supports SHA256, SHA384, and SHA512 hash algorithms
+- Learning mode automatically trusts new assemblies on first load
+- Strict mode only loads assemblies with known hashes
+- Events for hash mismatches and learning
+- Simple CSV file format (no external dependencies)
+
+**Features:**
+- In-memory hash storage with thread-safe operations
+- CSV file persistence (load/save/merge)
+- Learning mode for development environments
+- Strict mode for production environments
+- Support for multiple hash algorithms
+- Event-based audit trail for security monitoring
 
 **Impact:**
 - ? Protection against tampered assemblies
-- ? Additional integrity layer
-- ?? Performance overhead for hash calculation
-- ?? Requires consumers to maintain hash database
+- ? Additional integrity layer for defense-in-depth
+- ? Flexible learning and strict modes
+- ? No external dependencies (uses CSV format)
+- ? Optional feature (disabled by default)
+- ?? Performance overhead for hash calculation (minimal with SHA256)
+- ?? Requires consumers to manage hash database in production
 
-**Files to Create/Modify:**
-- `src/Xcaciv.Loader/AssemblyContext.cs`
-- `src/Xcaciv.Loader/HashAlgorithm.cs` (new enum)
-- Documentation updates
+**Files Created:**
+- `src/Xcaciv.Loader/AssemblyHashStore.cs` (new class)
+- `src/Xcaciv.Loader/AssemblyIntegrityVerifier.cs` (new class)
+
+**Files Modified:**
+- `src/Xcaciv.Loader/AssemblyContext.cs` (added IntegrityVerifier property, integrated verification)
+- `src/Xcaciv.Loader/readme.md` (added integrity verification documentation)
+
+**Usage Example:**
+```csharp
+// Learning mode (development)
+var verifier = new AssemblyIntegrityVerifier(
+    enabled: true,
+    learningMode: true);
+
+var context = new AssemblyContext(
+    pluginPath,
+    basePathRestriction: pluginDir,
+    integrityVerifier: verifier);
+
+// Save learned hashes
+verifier.HashStore.SaveToFile("trusted-hashes.csv");
+
+// Strict mode (production)
+var store = new AssemblyHashStore();
+store.LoadFromFile("trusted-hashes.csv");
+
+var strictVerifier = new AssemblyIntegrityVerifier(
+    enabled: true,
+    learningMode: false,
+    hashStore: store);
+```
 
 ---
 
@@ -1036,14 +1059,16 @@ public class EventTests
 2. ? **COMPLETED** - REL-002: Reduce broad exception catching
 3. ? **COMPLETED** - MAINT-003: Make security configuration instance-based
 4. ? **COMPLETED** - DOC-002: Add security guidance to BasePathRestriction
+5. ? **COMPLETED** - TRUST-001: Add Assembly Signature/Hash Verification
 
-**Phase 1 Progress: 4/4 Complete (100%)** ??
+**Phase 1 Progress: 5/5 Complete (100%)** ??
 
 **Achievements:**
 - Eliminated silent failures in error paths
 - Specific exception handling with clear error messages
 - Instance-based security configuration (zero static mutable state)
 - Comprehensive security documentation with prominent warnings
+- Assembly Signature/Hash verification implemented
 - All builds successful, tests passing
 
 ---
@@ -1060,10 +1085,9 @@ public class EventTests
 11. ?? TEST-002: Thread safety tests (if time permits)
 
 ### Phase 4: Optional Enhancements (Future)
-12. ?? TRUST-001: Assembly hash verification (if requested)
-13. ?? MAINT-002: Path validator interface (if testing becomes priority)
-14. ?? PERF-002: Timeout support (if customer requests)
-15. ?? API-001: Input sanitization helpers
+12. ?? MAINT-002: Path validator interface (if testing becomes priority)
+13. ?? PERF-002: Timeout support (if customer requests)
+14. ?? API-001: Input sanitization helpers
 
 ---
 
@@ -1093,6 +1117,7 @@ public class EventTests
 | MAINT-001 | ? | ? | ? No | None |
 | MAINT-003 | ? | ? | ? API | Medium |
 | MAINT-004 | ? | ? | ? API | Low |
+| TRUST-001 | ? | ? | ? No | None |
 | All Others | ? | ? | ? No | None |
 
 ---
