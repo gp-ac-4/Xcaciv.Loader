@@ -100,9 +100,19 @@ public class AssemblyContext : IAssemblyContext
     public event Action<string>? WildcardPathRestrictionUsed;
 
     /// <summary>
-    /// the directory path that the assembly is restricted to being loaded from
-    /// Made init-only as it is set only during construction and should not change afterward
+    /// The directory path that the assembly is restricted to being loaded from.
+    /// This provides a security boundary to prevent loading assemblies from arbitrary locations.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>Security Considerations:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description>Default value "." restricts to current working directory</description></item>
+    ///   <item><description>Explicit paths provide strongest security (e.g., dedicated plugin directory)</description></item>
+    ///   <item><description>Wildcard "*" disables path restriction - use ONLY in controlled test environments</description></item>
+    /// </list>
+    /// <para>This property is set during construction and cannot be changed afterward (init-only).</para>
+    /// </remarks>
+    /// <value>The base path restriction string, or "*" if unrestricted</value>
     public string BasePathRestriction { get; init; }
 
     /// <summary>
@@ -153,17 +163,39 @@ public class AssemblyContext : IAssemblyContext
     public static bool IsStrictDirectoryRestrictionEnabled() => strictDirectoryRestrictionEnabled;
 
     /// <summary>
-    /// create a new AssemblyContext abstraction instance
+    /// Creates a new AssemblyContext for loading and managing a dynamic assembly.
     /// </summary>
-    /// <param name="filePath"></param>
-    /// <param name="fullName"></param>
-    /// <param name="isCollectible"></param>
+    /// <param name="filePath">Path to the assembly file to load</param>
+    /// <param name="fullName">Optional assembly name for the load context</param>
+    /// <param name="isCollectible">Whether the assembly can be unloaded (default: true)</param>
     /// <param name="basePathRestriction">
-    /// The directory path that the assembly is restricted to being loaded from.
-    /// WARNING: Use "*" ONLY in controlled test environments. 
-    /// In production, ALWAYS specify an explicit directory path to prevent arbitrary code execution.
+    /// <para>The directory path that assemblies are restricted to loading from.</para>
+    /// <para><strong>?? SECURITY CRITICAL:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><strong>Production:</strong> ALWAYS specify an explicit directory path (e.g., @"C:\MyApp\Plugins")</description></item>
+    ///   <item><description><strong>Testing:</strong> Use "*" only in isolated test environments</description></item>
+    ///   <item><description><strong>Default ".":</strong> Restricts to current directory (secure)</description></item>
+    /// </list>
+    /// <para>Using "*" allows loading assemblies from ANY location, including system directories,
+    /// which can lead to arbitrary code execution vulnerabilities.</para>
     /// </param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <example>
+    /// <code>
+    /// // ? SECURE: Explicit path restriction
+    /// var context = new AssemblyContext(
+    ///     pluginPath, 
+    ///     basePathRestriction: Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins"));
+    /// 
+    /// // ? SECURE: Default restriction to current directory
+    /// var context = new AssemblyContext(pluginPath);
+    /// 
+    /// // ?? INSECURE: Wildcard allows loading from anywhere (TEST ONLY)
+    /// var context = new AssemblyContext(pluginPath, basePathRestriction: "*");
+    /// </code>
+    /// </example>
+    /// <exception cref="ArgumentNullException">Thrown when filePath is null or empty</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the file path is outside the base path restriction</exception>
+    /// <exception cref="SecurityException">Thrown when path validation fails or points to a restricted directory</exception>
     public AssemblyContext(string filePath, string? fullName = null, bool isCollectible = true, string basePathRestriction = ".")
     {
         if (String.IsNullOrEmpty(filePath)) throw new ArgumentNullException(nameof(filePath), "Assembly file path cannot be null or empty");
@@ -179,11 +211,21 @@ public class AssemblyContext : IAssemblyContext
     }
 
     /// <summary>
-    /// create a new AssemblyContext abstraction instance
+    /// Creates a new AssemblyContext for loading an assembly by its AssemblyName.
     /// </summary>
-    /// <param name="assemblyName"></param>
-    /// <param name="isCollectible"></param>
-    /// <param name="basePathRestriction">the directory path that the assembly is restricted to being loaded from</param>
+    /// <param name="assemblyName">The AssemblyName of the assembly to load</param>
+    /// <param name="isCollectible">Whether the assembly can be unloaded (default: true)</param>
+    /// <param name="basePathRestriction">
+    /// <para>The directory path that assemblies are restricted to loading from.</para>
+    /// <para><strong>?? SECURITY CRITICAL:</strong></para>
+    /// <list type="bullet">
+    ///   <item><description><strong>Production:</strong> ALWAYS specify an explicit directory path</description></item>
+    ///   <item><description><strong>Testing:</strong> Use "*" only in isolated test environments</description></item>
+    ///   <item><description><strong>Default ".":</strong> Restricts to current directory (secure)</description></item>
+    /// </list>
+    /// <para>Using "*" allows loading assemblies from ANY location, including system directories.</para>
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when assemblyName is null</exception>
     public AssemblyContext(AssemblyName assemblyName, bool isCollectible = true, string basePathRestriction = ".") 
     {
         this.FilePath = String.Empty;

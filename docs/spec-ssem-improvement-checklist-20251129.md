@@ -467,7 +467,7 @@ public event Action<string, string, Version?>? AssemblyLoaded;
 ---
 
 ### ? DOC-002: Add Security Guidance to BasePathRestriction
-**Status:** To Do  
+**Status:** ? **COMPLETED**  
 **SSEM Pillar:** Trustworthiness (Confidentiality), Maintainability (Analyzability)  
 **Priority:** High  
 **Effort:** Low  
@@ -475,60 +475,27 @@ public event Action<string, string, Version?>? AssemblyLoaded;
 **Issue:**  
 The wildcard `"*"` in `basePathRestriction` is dangerous but not prominently warned about in the XML documentation. Current warning is buried in parameter docs.
 
-**Current Documentation:**
-```csharp
-/// <param name="basePathRestriction">
-/// The directory path that the assembly is restricted to being loaded from.
-/// WARNING: Use "*" ONLY in controlled test environments. 
-/// In production, ALWAYS specify an explicit directory path to prevent arbitrary code execution.
-/// </param>
-```
+**Implementation Summary:**
+- Enhanced XML documentation on both constructors with prominent security warnings
+- Added comprehensive examples showing secure vs insecure usage patterns
+- Enhanced `BasePathRestriction` property documentation with security remarks
+- Added prominent security notice at the top of readme.md
+- Significantly expanded Security Best Practices section with:
+  - Recommended and dangerous patterns
+  - Security boundary guidelines for different environments
+  - Defense-in-depth strategies
+  - Event monitoring examples
 
-**Proposed Enhancement:**
-
-```csharp
-/// <summary>
-/// Creates a new AssemblyContext for loading and managing a dynamic assembly.
-/// </summary>
-/// <param name="filePath">Path to the assembly file to load</param>
-/// <param name="fullName">Optional assembly name for the load context</param>
-/// <param name="isCollectible">Whether the assembly can be unloaded (default: true)</param>
-/// <param name="basePathRestriction">
-/// <para>The directory path that assemblies are restricted to loading from.</para>
-/// <para><strong>?? SECURITY CRITICAL:</strong></para>
-/// <list type="bullet">
-///   <item><description><strong>Production:</strong> ALWAYS specify an explicit directory path (e.g., @"C:\MyApp\Plugins")</description></item>
-///   <item><description><strong>Testing:</strong> Use "*" only in isolated test environments</description></item>
-///   <item><description><strong>Default ".":</strong> Restricts to current directory (secure)</description></item>
-/// </list>
-/// <para>Using "*" allows loading assemblies from ANY location, including system directories,
-/// which can lead to arbitrary code execution vulnerabilities.</para>
-/// </param>
-/// <example>
-/// <code>
-/// // ? SECURE: Explicit path restriction
-/// var context = new AssemblyContext(
-///     pluginPath, 
-///     basePathRestriction: Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins"));
-/// 
-/// // ?? INSECURE: Wildcard (test only)
-/// var context = new AssemblyContext(pluginPath, basePathRestriction: "*");
-/// </code>
-/// </example>
-/// <exception cref="ArgumentNullException">Thrown when filePath is null or empty</exception>
-/// <exception cref="SecurityException">Thrown when path validation fails</exception>
-public AssemblyContext(string filePath, string? fullName = null, bool isCollectible = true, string basePathRestriction = ".")
-```
+**Files Modified:**
+- `src/Xcaciv.Loader/AssemblyContext.cs` (Lines ~160-180, ~200-215, ~115-130)
+- `src/Xcaciv.Loader/readme.md` (Added security notice, expanded security section)
 
 **Impact:**
-- ? Prominent security warning
+- ? Prominent security warning in IntelliSense
 - ? Clear examples of correct usage
 - ? Reduces security misconfigurations
 - ? Better developer experience
-
-**Files to Modify:**
-- `src/Xcaciv.Loader/AssemblyContext.cs` (Constructor documentation)
-- `src/Xcaciv.Loader/readme.md` (Add security section if missing)
+- ? Comprehensive security guidance in documentation
 
 ---
 
@@ -1095,7 +1062,9 @@ public class EventTests
 1. ? **COMPLETED** - REL-001: Fix silent failure in LoadFromPath
 2. ? **COMPLETED** - REL-002: Reduce broad exception catching
 3. ?? MAINT-003: Make security configuration instance-based
-4. ?? DOC-002: Add security guidance to BasePathRestriction
+4. ? **COMPLETED** - DOC-002: Add security guidance to BasePathRestriction
+
+**Phase 1 Progress: 3/4 Complete (75%)**
 
 ### Phase 2: Maintainability (Week 2)
 5. ?? MAINT-001: Refactor VerifyPath
@@ -1177,6 +1146,6 @@ public class EventTests
 
 ---
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Last Updated:** 2025-11-29  
 **Status:** Ready for Implementation
