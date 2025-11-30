@@ -136,16 +136,26 @@ public class AssemblySecurityPolicy
     /// <returns>True if the path contains a forbidden directory, false otherwise</returns>
     /// <remarks>
     /// This method performs a case-insensitive substring match against the forbidden directories.
+    /// Spaces in directory names are normalized (removed) for matching.
     /// </remarks>
     public bool ContainsForbiddenDirectory(string fullPath)
     {
         if (String.IsNullOrWhiteSpace(fullPath))
             return false;
         
-        var lowerPath = fullPath.ToLowerInvariant();
+        // Normalize path: lowercase, forward slashes to backslashes, remove spaces for matching
+        var normalizedPath = fullPath.ToLowerInvariant().Replace('/', '\\').Replace(" ", String.Empty);
+        
         foreach (var forbiddenDir in ForbiddenDirectories)
         {
-            if (lowerPath.Contains($"\\{forbiddenDir}\\", StringComparison.OrdinalIgnoreCase))
+            var normalizedForbiddenDir = forbiddenDir.ToLowerInvariant().Replace(" ", String.Empty);
+            
+            // Check for directory as a path component (surrounded by backslashes or at start/end)
+            if (normalizedPath.Contains($"\\{normalizedForbiddenDir}\\", StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith($"{normalizedForbiddenDir}\\", StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith($"\\{normalizedForbiddenDir}\\", StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.EndsWith($"\\{normalizedForbiddenDir}", StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.Equals(normalizedForbiddenDir, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }

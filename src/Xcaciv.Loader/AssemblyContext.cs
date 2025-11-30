@@ -1297,12 +1297,24 @@ public class AssemblyContext : IAssemblyContext
             // Exceptions are already raised via events
         }
         
-        // Dispose other managed resources
-        disposalTokenSource.Cancel();
-        disposalTokenSource.Dispose();
-        
-        // Set disposed flag
-        disposed = true;
+        // Thread-safe disposal of cancellation token source
+        lock (syncLock)
+        {
+            if (!disposed)
+            {
+                try
+                {
+                    disposalTokenSource.Cancel();
+                    disposalTokenSource.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Already disposed in concurrent call - this is fine
+                }
+                
+                disposed = true;
+            }
+        }
         
         // Suppress finalization
         GC.SuppressFinalize(this);
