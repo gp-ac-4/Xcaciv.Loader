@@ -1198,8 +1198,6 @@ public class AssemblyContext : IAssemblyContext
     {
         if (disposed) return false;
         
-        if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) return false;
-        
         try
         {
             // Use a task to perform the unload operation asynchronously
@@ -1208,10 +1206,14 @@ public class AssemblyContext : IAssemblyContext
             {
                 lock (syncLock)
                 {
-                    if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) 
+                    if (this.loadContext is null)
                         return false;
                     
-                    if (this.loadContext is null) return false;
+                    if (!this.loadContext.IsCollectible)
+                        return false;
+                    
+                    if (!this.isLoaded)
+                        return false;
                     
                     try
                     {
