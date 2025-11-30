@@ -278,6 +278,17 @@ C:\Plugins\Plugin1.dll,abc123base64hash==
 C:\Plugins\Plugin2.dll,def456base64hash==
 ```
 
+**Path Handling:**
+- Paths are **case-sensitive** (e.g., `Plugin.dll` and `plugin.dll` are treated as different files)
+- Relative paths are converted to absolute paths automatically
+- Path separators are normalized (backslashes on Windows, forward slashes on Unix)
+- Original path casing is preserved in the CSV file
+
+**Note for Cross-Platform:**
+- On Windows (case-insensitive file system), different case variations refer to the same physical file but are tracked separately in the hash store
+- On Linux/Unix (case-sensitive file systems), different case variations are truly different files
+- For consistency, always use the same casing when referring to assembly paths
+
 ### Supported Hash Algorithms
 
 - SHA256 (default, recommended)

@@ -7,7 +7,20 @@ namespace Xcaciv.Loader;
 /// <summary>
 /// Stores and manages assembly file hashes for integrity verification.
 /// Supports in-memory storage and CSV file persistence.
+/// Thread-safe for concurrent access.
 /// </summary>
+/// <remarks>
+/// Path Handling:
+/// - Paths are case-sensitive (C:\Test\Assembly.dll and c:\test\assembly.dll are treated as different files)
+/// - Relative paths are converted to absolute paths using Path.GetFullPath
+/// - Path separators are normalized (forward slashes converted to backslashes on Windows)
+/// - Paths with . and .. are resolved to their canonical form
+/// 
+/// CSV Format:
+/// - Comment lines start with #
+/// - Data format: FilePath,Hash
+/// - Fields containing commas, quotes, or newlines are escaped per CSV standard
+/// </remarks>
 public class AssemblyHashStore
 {
     private readonly Dictionary<string, string> hashes = new();
@@ -30,9 +43,13 @@ public class AssemblyHashStore
     /// <summary>
     /// Adds or updates a hash for the specified file path
     /// </summary>
-    /// <param name="filePath">Full path to the assembly file</param>
+    /// <param name="filePath">Full or relative path to the assembly file. Paths are case-sensitive.</param>
     /// <param name="hash">Base64-encoded hash value</param>
     /// <exception cref="ArgumentException">Thrown when filePath or hash is null or whitespace</exception>
+    /// <remarks>
+    /// The path will be normalized to an absolute path but case will be preserved.
+    /// If a hash already exists for the normalized path, it will be updated.
+    /// </remarks>
     public void AddOrUpdate(string filePath, string hash)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
@@ -49,9 +66,13 @@ public class AssemblyHashStore
     /// <summary>
     /// Attempts to get the hash for the specified file path
     /// </summary>
-    /// <param name="filePath">Full path to the assembly file</param>
+    /// <param name="filePath">Full or relative path to the assembly file. Paths are case-sensitive.</param>
     /// <param name="hash">The hash value if found, null otherwise</param>
     /// <returns>True if hash was found, false otherwise</returns>
+    /// <remarks>
+    /// The path will be normalized to an absolute path before lookup.
+    /// The lookup is case-sensitive, so the case must match the original stored path.
+    /// </remarks>
     public bool TryGetHash(string filePath, out string? hash)
     {
         if (String.IsNullOrWhiteSpace(filePath))
@@ -71,8 +92,12 @@ public class AssemblyHashStore
     /// <summary>
     /// Removes the hash for the specified file path
     /// </summary>
-    /// <param name="filePath">Full path to the assembly file</param>
+    /// <param name="filePath">Full or relative path to the assembly file. Paths are case-sensitive.</param>
     /// <returns>True if hash was removed, false if it didn't exist</returns>
+    /// <remarks>
+    /// The path will be normalized to an absolute path before removal.
+    /// The lookup is case-sensitive, so the case must match the original stored path.
+    /// </remarks>
     public bool Remove(string filePath)
     {
         if (String.IsNullOrWhiteSpace(filePath))
@@ -105,7 +130,9 @@ public class AssemblyHashStore
     /// <exception cref="IOException">Thrown when file cannot be written</exception>
     /// <remarks>
     /// File format: Each line contains "filepath,base64hash"
+    /// Paths are written with their original case preserved.
     /// Paths and hashes are escaped for CSV compatibility.
+    /// Comment lines are prefixed with # and are ignored during loading.
     /// </remarks>
     public void SaveToFile(string filePath)
     {
@@ -139,6 +166,11 @@ public class AssemblyHashStore
     /// <exception cref="ArgumentException">Thrown when filePath is null or whitespace</exception>
     /// <exception cref="FileNotFoundException">Thrown when file doesn't exist</exception>
     /// <exception cref="FormatException">Thrown when file contains invalid format</exception>
+    /// <remarks>
+    /// Paths are loaded as-is from the file and then normalized to absolute paths.
+    /// Case is preserved from the file. All existing hashes in the store are cleared before loading.
+    /// Comment lines (starting with #) and empty lines are skipped.
+    /// </remarks>
     public void LoadFromFile(string filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
@@ -202,6 +234,12 @@ public class AssemblyHashStore
     /// <exception cref="ArgumentException">Thrown when filePath is null or whitespace</exception>
     /// <exception cref="FileNotFoundException">Thrown when file doesn't exist</exception>
     /// <exception cref="FormatException">Thrown when file contains invalid format</exception>
+    /// <remarks>
+    /// Paths are loaded as-is from the file and then normalized to absolute paths.
+    /// Case is preserved from the file. Existing hashes are retained unless overwriteExisting is true.
+    /// Comment lines (starting with #) and empty lines are skipped.
+    /// Path matching is case-sensitive when checking for existing entries.
+    /// </remarks>
     public void MergeFromFile(string filePath, bool overwriteExisting = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath, nameof(filePath));
@@ -262,7 +300,11 @@ public class AssemblyHashStore
     /// <summary>
     /// Gets all file paths that have stored hashes
     /// </summary>
-    /// <returns>Collection of file paths</returns>
+    /// <returns>Collection of file paths with their original case preserved</returns>
+    /// <remarks>
+    /// Returns the normalized absolute paths as they are stored internally.
+    /// The order of paths is not guaranteed.
+    /// </remarks>
     public IReadOnlyCollection<string> GetFilePaths()
     {
         lock (lockObject)
@@ -274,6 +316,13 @@ public class AssemblyHashStore
     /// <summary>
     /// Normalizes file path for consistent storage and lookup
     /// </summary>
+    /// <remarks>
+    /// Normalization includes:
+    /// - Converting relative paths to absolute paths
+    /// - Resolving . and .. path segments
+    /// - Normalizing path separators (\ on Windows, / on Unix)
+    /// - Case is preserved (paths are case-sensitive)
+    /// </remarks>
     private static string NormalizePath(string filePath)
     {
         return Path.GetFullPath(filePath);
