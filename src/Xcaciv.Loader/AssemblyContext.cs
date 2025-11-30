@@ -1101,10 +1101,14 @@ public class AssemblyContext : IAssemblyContext
         
         lock (syncLock)
         {
-            if (!this.loadContext?.IsCollectible ?? false || !this.isLoaded) 
+            if (this.loadContext is null)
                 return false;
             
-            if (this.loadContext is null) return false;
+            if (!this.loadContext.IsCollectible)
+                return false;
+            
+            if (!this.isLoaded)
+                return false;
             
             try
             {
