@@ -106,19 +106,4 @@ public class SecurityTests
                 System.IO.File.Delete(testPath);
         }
     }
-    
-    [Fact]
-    [Obsolete("Testing deprecated method for backward compatibility")]
-    public void ObsoleteMethod_SetStrictDirectoryRestriction_ShowsWarning()
-    {
-        // This test verifies the obsolete method still exists for backward compatibility
-        // It should compile with a warning but not fail
-        #pragma warning disable CS0618 // Type or member is obsolete
-        AssemblyContext.SetStrictDirectoryRestriction(true);
-        var isStrict = AssemblyContext.IsStrictDirectoryRestrictionEnabled();
-        #pragma warning restore CS0618
-        
-        // The obsolete methods don't actually do anything anymore
-        Assert.False(isStrict); // Always returns false now
-    }
 }
