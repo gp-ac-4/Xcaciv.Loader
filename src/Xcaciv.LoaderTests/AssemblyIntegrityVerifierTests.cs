@@ -249,7 +249,7 @@ public class AssemblyIntegrityVerifierTests
             learningMode: true);
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => verifier.VerifyIntegrity(null!));
+        Assert.Throws<ArgumentNullException>(() => verifier.VerifyIntegrity(null!));
         Assert.Throws<ArgumentException>(() => verifier.VerifyIntegrity(""));
         Assert.Throws<ArgumentException>(() => verifier.VerifyIntegrity("   "));
     }
@@ -429,11 +429,14 @@ public class AssemblyIntegrityVerifierTests
         var originalHash = verifier.ComputeHash(testAssemblyPath);
         verifier.HashStore.AddOrUpdate(testAssemblyPath, "manualHash==");
 
-        // Act
-        verifier.VerifyIntegrity(testAssemblyPath);
-
-        // Assert - original hash should throw because it doesn't match
-        // But since we're in learning mode with an existing hash, it verifies against existing
+        // Act & Assert - Existing hash should be verified even in learning mode
+        var ex = Assert.Throws<SecurityException>(() => 
+            verifier.VerifyIntegrity(testAssemblyPath));
+        
+        Assert.Contains("integrity verification failed", ex.Message);
+        Assert.Contains("manualHash==", ex.Message);
+        
+        // Hash should not be replaced
         Assert.True(verifier.HashStore.TryGetHash(testAssemblyPath, out var storedHash));
         Assert.Equal("manualHash==", storedHash); // Should not be replaced
     }

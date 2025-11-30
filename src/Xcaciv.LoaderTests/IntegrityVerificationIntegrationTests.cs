@@ -14,18 +14,33 @@ public class IntegrityVerificationIntegrationTests
     private readonly string tempDirectory;
     private readonly string testDllPath;
 
+    private string simpleDllPath = @"..\..\..\..\TestAssembly\bin\{1}\net8.0\zTestAssembly.dll";
+
     public IntegrityVerificationIntegrationTests()
     {
+
+#if DEBUG
+        this.simpleDllPath = simpleDllPath.Replace("{1}", "Debug");
+#else
+        this.simpleDllPath = simpleDllPath.Replace("{1}", "Release");
+#endif
+
+        // resolve absolute paths
+        var sourceAssembly = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, this.simpleDllPath));
+
         tempDirectory = Path.Combine(Path.GetTempPath(), $"LoaderTests_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDirectory);
         
         // Copy test assembly
-        var sourceAssembly = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "zTestAssembly.dll");
         testDllPath = Path.Combine(tempDirectory, "zTestAssembly.dll");
-        
+
         if (File.Exists(sourceAssembly))
         {
             File.Copy(sourceAssembly, testDllPath, true);
+        }
+        else
+        {
+            throw new Exception("Test assembly not found: " + sourceAssembly);
         }
     }
 
@@ -145,6 +160,9 @@ public class IntegrityVerificationIntegrationTests
                 testDllPath,
                 basePathRestriction: "*",
                 integrityVerifier: verifier);
+            
+            // Must actually load the assembly to trigger verification
+            context.CreateInstance("Class1");
         });
     }
 
@@ -202,6 +220,8 @@ public class IntegrityVerificationIntegrationTests
                 testDllPath,
                 basePathRestriction: "*",
                 integrityVerifier: verifier);
+
+           context.CreateInstance("Class1");
         });
     }
 

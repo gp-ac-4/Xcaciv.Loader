@@ -566,14 +566,16 @@ public class AssemblyContext : IAssemblyContext
         {
             throw new InvalidOperationException("Cannot load assembly: File path is not set");
         }
-
-        if (!File.Exists(this.FilePath))
-        {
-            throw new FileNotFoundException($"Assembly file not found at specified path", this.FilePath);
-        }
         
         try
         {
+            if (!File.Exists(this.FilePath))
+            {
+                var ex = new FileNotFoundException($"Assembly file not found at specified path", this.FilePath);
+                AssemblyLoadFailed?.Invoke(this.FilePath, ex);
+                throw ex;
+            }
+            
             // Verify assembly integrity if enabled
             IntegrityVerifier?.VerifyIntegrity(this.FilePath);
             
@@ -617,6 +619,11 @@ public class AssemblyContext : IAssemblyContext
                     throw new TimeoutException(
                         $"Assembly loading was cancelled due to timeout ({LoadTimeout.TotalSeconds:F1}s): {this.FilePath}", 
                         ex.InnerException);
+                }
+                catch (AggregateException ex)
+                {
+                    // Unwrap other exceptions
+                    throw ex.InnerException ?? ex;
                 }
             }
 
@@ -758,10 +765,12 @@ public class AssemblyContext : IAssemblyContext
         ThrowIfDisposed();
         
         ArgumentException.ThrowIfNullOrWhiteSpace(className, nameof(className));
-        
-        if (!String.IsNullOrEmpty(this.FilePath) && !File.Exists(this.FilePath))
+
+        if (!File.Exists(this.FilePath))
         {
-            throw new FileNotFoundException("Assembly file not found at specified path", this.FilePath);
+            var ex = new FileNotFoundException($"Assembly file not found at specified path", this.FilePath);
+            AssemblyLoadFailed?.Invoke(this.FilePath, ex);
+            throw ex;
         }
 
         try
@@ -777,10 +786,6 @@ public class AssemblyContext : IAssemblyContext
             var instanceType = this.loadContext?.Assemblies.SelectMany(o => o.GetTypes()).FirstOrDefault(t => t.FullName?.EndsWith(className) == true);
 
             return (instanceType is null) ? null : Activator.CreateInstance(instanceType);
-        }
-        catch (FileNotFoundException)
-        {
-            throw;
         }
         catch (ReflectionTypeLoadException ex)
         {
@@ -819,10 +824,12 @@ public class AssemblyContext : IAssemblyContext
         ThrowIfDisposed();
         
         ArgumentException.ThrowIfNullOrWhiteSpace(className, nameof(className));
-        
-        if (!String.IsNullOrEmpty(this.FilePath) && !File.Exists(this.FilePath))
+
+        if (!File.Exists(this.FilePath))
         {
-            throw new FileNotFoundException("Assembly file not found at specified path", this.FilePath);
+            var ex = new FileNotFoundException($"Assembly file not found at specified path", this.FilePath);
+            AssemblyLoadFailed?.Invoke(this.FilePath, ex);
+            throw ex;
         }
 
         try
@@ -844,25 +851,13 @@ public class AssemblyContext : IAssemblyContext
 
             return ActivateInstance<T>(instanceType);
         }
-        catch (FileNotFoundException)
-        {
-            throw;
-        }
         catch (ReflectionTypeLoadException ex)
         {
             throw new TypeLoadException($"Failed to load types from assembly: {ex.Message}", ex);
         }
-        catch (TypeNotFoundException)
-        {
-            throw;
-        }
         catch (InvalidCastException ex)
         {
             throw new InvalidCastException($"Cannot convert instance of {className} to type {typeof(T).FullName}", ex);
-        }
-        catch (InvalidOperationException)
-        {
-            throw;
         }
         catch (MissingMethodException ex)
         {
@@ -875,10 +870,6 @@ public class AssemblyContext : IAssemblyContext
         catch (MemberAccessException ex)
         {
             throw new InvalidOperationException($"Failed to create instance of '{className}': Cannot access constructor", ex);
-        }
-        catch (TypeLoadException)
-        {
-            throw;
         }
     }
     

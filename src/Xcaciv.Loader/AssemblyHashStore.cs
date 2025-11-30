@@ -276,7 +276,7 @@ public class AssemblyHashStore
     /// </summary>
     private static string NormalizePath(string filePath)
     {
-        return Path.GetFullPath(filePath).ToLowerInvariant();
+        return Path.GetFullPath(filePath);
     }
     
     /// <summary>

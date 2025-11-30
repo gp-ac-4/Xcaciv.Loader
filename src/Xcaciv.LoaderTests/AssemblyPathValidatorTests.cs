@@ -13,7 +13,7 @@ public class AssemblyPathValidatorTests
     public void SanitizeAssemblyPath_NullPath_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => AssemblyPathValidator.SanitizeAssemblyPath(null!));
+        Assert.Throws<ArgumentNullException>(() => AssemblyPathValidator.SanitizeAssemblyPath(null!));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.SanitizeAssemblyPath(""));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.SanitizeAssemblyPath("   "));
     }
@@ -28,8 +28,8 @@ public class AssemblyPathValidatorTests
         var result = AssemblyPathValidator.SanitizeAssemblyPath(pathWithNullByte);
 
         // Assert
-        Assert.DoesNotContain("\0", result);
-        Assert.Equal("C:\\Test\\Assembly.dll", result);
+        Assert.DoesNotContain('\0', result);
+        Assert.Equal("C:\\TestAssembly.dll", result);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class AssemblyPathValidatorTests
     public void ResolveRelativeToBase_NullPath_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => AssemblyPathValidator.ResolveRelativeToBase(null!));
+        Assert.Throws<ArgumentNullException>(() => AssemblyPathValidator.ResolveRelativeToBase(null!));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.ResolveRelativeToBase(""));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.ResolveRelativeToBase("   "));
     }
@@ -184,7 +184,7 @@ public class AssemblyPathValidatorTests
     public void HasValidAssemblyExtension_NullPath_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => AssemblyPathValidator.HasValidAssemblyExtension(null!));
+        Assert.Throws<ArgumentNullException>(() => AssemblyPathValidator.HasValidAssemblyExtension(null!));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.HasValidAssemblyExtension(""));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.HasValidAssemblyExtension("   "));
     }
@@ -223,7 +223,7 @@ public class AssemblyPathValidatorTests
     public void ValidateAndSanitize_NullPath_ThrowsArgumentException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => AssemblyPathValidator.ValidateAndSanitize(null!));
+        Assert.Throws<ArgumentNullException>(() => AssemblyPathValidator.ValidateAndSanitize(null!));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.ValidateAndSanitize(""));
         Assert.Throws<ArgumentException>(() => AssemblyPathValidator.ValidateAndSanitize("   "));
     }

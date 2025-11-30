@@ -28,6 +28,10 @@ namespace Xcaciv.Loader.Tests
             this.simpleDllPath = simpleDllPath.Replace("{1}", "Release");
             this.dependentDllPath = dependentDllPath.Replace("{1}", "Release");
 #endif
+
+            // resolve absolute paths
+            this.simpleDllPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, this.simpleDllPath));
+            this.dependentDllPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, this.dependentDllPath));
         }
 
         [Fact()]

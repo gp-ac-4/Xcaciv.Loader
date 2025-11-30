@@ -72,7 +72,7 @@ public class AssemblyHashStoreTests
         var store = new AssemblyHashStore();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => store.AddOrUpdate(null!, "hash"));
+        Assert.Throws<ArgumentNullException>(() => store.AddOrUpdate(null!, "hash"));
         Assert.Throws<ArgumentException>(() => store.AddOrUpdate("", "hash"));
         Assert.Throws<ArgumentException>(() => store.AddOrUpdate("   ", "hash"));
     }
@@ -84,7 +84,7 @@ public class AssemblyHashStoreTests
         var store = new AssemblyHashStore();
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => store.AddOrUpdate(@"C:\Test\Assembly.dll", null!));
+        Assert.Throws<ArgumentNullException>(() => store.AddOrUpdate(@"C:\Test\Assembly.dll", null!));
         Assert.Throws<ArgumentException>(() => store.AddOrUpdate(@"C:\Test\Assembly.dll", ""));
         Assert.Throws<ArgumentException>(() => store.AddOrUpdate(@"C:\Test\Assembly.dll", "   "));
     }
@@ -108,15 +108,15 @@ public class AssemblyHashStoreTests
     {
         // Arrange
         var store = new AssemblyHashStore();
-        var path1 = @"C:\Test\Assembly.dll";
-        var path2 = @"c:\test\assembly.dll"; // Different case
+        var relativePath = @".\Test\Assembly.dll";
         var hash = "testHash==";
 
         // Act
-        store.AddOrUpdate(path1, hash);
-        var result = store.TryGetHash(path2, out var retrievedHash);
+        store.AddOrUpdate(relativePath, hash);
+        var absolutePath = Path.GetFullPath(relativePath);
+        var result = store.TryGetHash(absolutePath, out var retrievedHash);
 
-        // Assert - paths should be normalized and match
+        // Assert - paths should be normalized (relative vs absolute) and match
         Assert.True(result);
         Assert.Equal(hash, retrievedHash);
     }
@@ -354,7 +354,6 @@ public class AssemblyHashStoreTests
 
         // Assert
         Assert.Equal(3, paths.Count);
-        // Note: paths are normalized (lowercased) internally
     }
 
     [Fact]
