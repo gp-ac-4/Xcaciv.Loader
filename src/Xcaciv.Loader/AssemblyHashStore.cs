@@ -11,7 +11,10 @@ namespace Xcaciv.Loader;
 /// </summary>
 /// <remarks>
 /// Path Handling:
-/// - Paths are case-sensitive (C:\Test\Assembly.dll and c:\test\assembly.dll are treated as different files)
+/// - Paths are treated as case-sensitive by the hash store (e.g., C:\Test\Assembly.dll and c:\test\assembly.dll are considered different entries).
+///   However, note that Windows file systems are typically case-insensitive, so these paths may refer to the same file on disk.
+///   This means that on Windows, using different casing for the same file path can result in duplicate or missing hash entries.
+///   Users should ensure consistent casing for file paths when adding or retrieving hashes, especially on Windows.
 /// - Relative paths are converted to absolute paths using Path.GetFullPath
 /// - Path separators are normalized (forward slashes converted to backslashes on Windows)
 /// - Paths with . and .. are resolved to their canonical form
