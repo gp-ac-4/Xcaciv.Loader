@@ -2,7 +2,7 @@
 
 Sexy simple C# module for runtime loading of types from external assemblies. This is a separate assembly to abstract AssemblyLoader operations and suppress trimming alerts.
 
-## ?? Security Notice
+## Security Notice
 
 **When loading assemblies dynamically, always restrict the base path in production environments.** Using wildcard `"*"` allows loading from ANY location, including system directories, which can lead to arbitrary code execution vulnerabilities.
 
