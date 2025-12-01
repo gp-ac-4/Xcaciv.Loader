@@ -45,4 +45,4 @@ jobs:
         dotnet pack $env:Nuget_Project_Path --no-build  --configuration Release
     - name: Push to GitHub Packages
       run: |
-        dotnet nuget push **\*.nupkg --source "https://nuget.pkg.github.com/xcaciv/index.json" --api-key ${{ secrets.NUGET_PAT }} --skip-duplicate
+        dotnet nuget push **\*.nupkg --source "https://nuget.pkg.github.com/xcaciv/index.json" -n "github" --api-key ${{ secrets.NUGET_PAT }} --skip-duplicate
