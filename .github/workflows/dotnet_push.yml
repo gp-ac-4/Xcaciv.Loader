@@ -47,4 +47,4 @@ jobs:
       run: |
         dotnet nuget push **\*.nupkg --source "https://nuget.pkg.github.com/xcaciv/index.json" -n "github" --skip-duplicate
       env:
-        NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NUGET_AUTH_TOKEN: ${{ secrets.NUGET_PAT }}
