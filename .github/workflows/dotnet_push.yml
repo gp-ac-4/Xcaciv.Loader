@@ -43,14 +43,8 @@ jobs:
     - name: Nuget Package
       run: |
         dotnet pack $env:Nuget_Project_Path --no-build  --configuration Release
-    - name: Configure Nuget Source
+    - name: Push to GitHub Packages
       run: |
-        dotnet nuget add source "https://nuget.pkg.github.com/xcaciv/index.json" -n "github" -u xcaciv -p ${{ secrets.NUGET_PAT }} --store-password-in-clear-text
-    - name: Nuget Push
-      run: |
-        dotnet nuget push **\*.nupkg -k ${{ secrets.NUGET_PAT }} -s "github" --skip-duplicate
-    - name: Cleanup
-      if: always()
-      continue-on-error: true
-      run: |
-        dotnet nuget remove source github
+        dotnet nuget push **\*.nupkg --source "github" --skip-duplicate
+      env:
+        NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
