@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Refactored `MergeFromFile` in `AssemblyHashStore` to use explicit LINQ `Where` filter for better code clarity
+- Improved condition logic in `UnloadAsync` method to fix always-false evaluation issue
+- Minor documentation updates in readme
+
+### Fixed
+- Fixed always-false condition in `UnloadAsync` method that could prevent proper cleanup
+- Improved LINQ query readability in `AssemblyHashStore.MergeFromFile`
+
+---
+
+## [2.0.0] - 2025-11-30
+
 ### Added
 - **Instance-based Security Policies**: New `AssemblySecurityPolicy` class provides configurable security policies per `AssemblyContext` instance
   - `AssemblySecurityPolicy.Default`: Basic system directory restrictions
@@ -202,12 +215,6 @@ var context = new AssemblyContext(
     basePathRestriction: pluginDir,
     securityPolicy: customPolicy);
 ```
-
-### Fixed
-- Silent failures in dependency resolution - security violations now properly propagate
-- Overly broad exception catching that could mask unexpected errors
-- Static mutable state causing test execution issues
-- Missing error context in exception messages
 
 ### Security
 - Enhanced path validation with instance-based forbidden directory lists

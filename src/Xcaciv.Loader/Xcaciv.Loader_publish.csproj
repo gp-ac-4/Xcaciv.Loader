@@ -1,0 +1,108 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Target Framework -->
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <!-- Define a property to conditionally switch to .NET 10 -->
+    <UseNet10 Condition="'$(UseNet10)' == ''">false</UseNet10>
+    <TargetFramework Condition="'$(UseNet10)' == 'true'">net10.0</TargetFramework>
+    
+    <!-- Version Information -->
+    <Version>2.0.0</Version>
+    <FileVersion>2.0.0.0</FileVersion>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    
+    <!-- Build Configuration -->
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <AssemblyName>Xcaciv.Loader</AssemblyName>
+    <RootNamespace>Xcaciv.Loader</RootNamespace>
+    <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    
+    <!-- Package Metadata -->
+    <PackageId>Xcaciv.Loader</PackageId>
+    <Title>Xcaciv.Loader - Secure Dynamic Assembly Loading</Title>
+    <Description>Secure, modern .NET library for runtime loading of types from external assemblies. Features instance-based security policies, optional cryptographic integrity verification, comprehensive audit trail events, and SSEM-compliant architecture. Perfect for plugin systems and modular applications.</Description>
+    <Authors>Alton Crossley</Authors>
+    <Copyright>Copyright © 2021-2025 Alton Crossley</Copyright>
+    
+    <!-- Package Classification -->
+    <PackageTags>assembly;loader;plugin;dynamic;security;modular;plugins;addins;extensions;reflection;isolation;unloading;integrity;verification;SSEM</PackageTags>
+    <PackageProjectUrl>https://github.com/Xcaciv/Xcaciv.Loader</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Xcaciv/Xcaciv.Loader</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
+    <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    
+    <!-- Release Notes -->
+    <PackageReleaseNotes>Major v2.0 release with breaking changes and significant new features:
+
+BREAKING CHANGES:
+- Security configuration now instance-based (use AssemblySecurityPolicy parameter)
+- Deprecated static SetStrictDirectoryRestriction() - will be removed in v3.0
+- GetLoadedTypes&lt;T&gt;() moved to AssemblyScanner class
+
+NEW FEATURES:
+- Instance-based security policies (Default/Strict/Custom)
+- Optional assembly integrity verification with SHA256/384/512
+- Comprehensive event system for audit trail and monitoring
+- AssemblyPathValidator for input sanitization
+- AssemblyScanner for type discovery
+- Load timeout protection (default 30s)
+- Enhanced error handling with specific exception types
+- Professional XML documentation throughout
+
+SECURITY:
+- Per-instance security policies for flexible configurations
+- Cryptographic hash-based integrity verification (optional)
+- 6 security events for complete audit trail
+- Input validation utilities
+- Comprehensive security documentation
+
+See CHANGELOG.md for complete details and migration guide.
+    </PackageReleaseNotes>
+    
+    <!-- Symbol Package Configuration -->
+    <IncludeSymbols>True</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    
+    <!-- Source Link for GitHub -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+  
+  <!-- Release Configuration -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <OutputType>library</OutputType>
+    <SelfContained>true</SelfContained>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <NoWin32Manifest>true</NoWin32Manifest>
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+  
+  <!-- Debug Configuration -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <IsTrimmable>True</IsTrimmable>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+  
+  <!-- Release Configuration Additional -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <IsTrimmable>True</IsTrimmable>
+    <Optimize>False</Optimize>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+  </PropertyGroup>
+  
+  <!-- Package Content -->
+  <ItemGroup>
+    <None Include="readme.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+  
+  <!-- Source Link Package -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>
+  </ItemGroup>
+</Project>
