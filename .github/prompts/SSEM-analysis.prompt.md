@@ -262,7 +262,7 @@ For each pillar, provide:
 
 ### Part 3: Appendix A - Evaluation Checklist
 
-After the detailed findings, include this checklist with items marked based on your evaluation:
+After the detailed findings, include this checklist with items marked ("x" for complete and " " for incomplete) based on your evaluation:
 
 ```
 
