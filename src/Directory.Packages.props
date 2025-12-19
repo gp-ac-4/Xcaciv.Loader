@@ -5,6 +5,7 @@
   <!-- Application Versions -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
+    <PackageVersion Include="System.Reflection.Metadata" Version="8.0.0" />
   </ItemGroup>
   <!-- Unit Test Versions -->
   <ItemGroup>

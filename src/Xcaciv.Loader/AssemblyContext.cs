@@ -591,6 +591,20 @@ public class AssemblyContext : IAssemblyContext
             // Verify the resolved path against security restrictions
             var verifiedPath = VerifyPath(path, "*", this.SecurityPolicy);
             
+            // Preflight: inspect metadata for emit/expressions indicators under strict policy
+            if (this.SecurityPolicy.StrictMode)
+            {
+                var preflight = AssemblyPreflightAnalyzer.Analyze(verifiedPath);
+                if (preflight.HasAnyIndicators)
+                {
+                    var reason = preflight.Indicators.Count > 0 
+                        ? String.Join(", ", preflight.Indicators)
+                        : "Preflight detected Reflection.Emit or Expressions.Compile";
+                    SecurityViolation?.Invoke(verifiedPath, $"Preflight policy violation: {reason}");
+                    throw new SecurityException("Preflight policy violation under strict policy: Reflection.Emit/LINQ Compile detected.");
+                }
+            }
+            
             // Verify assembly integrity if enabled
             IntegrityVerifier?.VerifyIntegrity(verifiedPath);
             
@@ -665,6 +679,20 @@ public class AssemblyContext : IAssemblyContext
                 var ex = new FileNotFoundException($"Assembly file not found at specified path", this.FilePath);
                 AssemblyLoadFailed?.Invoke(this.FilePath, ex);
                 throw ex;
+            }
+            
+            // Preflight: inspect metadata for emit/expressions indicators under strict policy
+            if (this.SecurityPolicy.StrictMode)
+            {
+                var preflight = AssemblyPreflightAnalyzer.Analyze(this.FilePath);
+                if (preflight.HasAnyIndicators)
+                {
+                    var reason = preflight.Indicators.Count > 0 
+                        ? String.Join(", ", preflight.Indicators)
+                        : "Preflight detected Reflection.Emit or Expressions.Compile";
+                    SecurityViolation?.Invoke(this.FilePath, $"Preflight policy violation: {reason}");
+                    throw new SecurityException("Preflight policy violation under strict policy: Reflection.Emit/LINQ Compile detected.");
+                }
             }
             
             // Verify assembly integrity if enabled

@@ -103,6 +103,10 @@ See CHANGELOG.md for complete details and migration guide.
     </None>
   </ItemGroup>
   
+  <ItemGroup>
+    <PackageReference Include="System.Reflection.Metadata" />
+  </ItemGroup>
+  
   <!-- Source Link Package -->
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All"/>

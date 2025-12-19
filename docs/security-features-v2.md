@@ -24,6 +24,38 @@ This document summarizes the security-oriented capabilities introduced and enhan
   - `Default`: `DisallowDynamicAssemblies = false` (backward compatibility).
 - **Limitations**: Blocking is local to loads performed through `AssemblyContext`. It cannot prevent other code in the process from using Reflection.Emit. For stronger isolation, consider separate processes or NativeAOT scenarios.
 
+### Preflight Checks (v2.1+)
+
+- **What**: Lightweight, metadata-only scan of assembly files prior to load to detect risky patterns without executing code.
+- **Detection**:
+  - Types defined under `System.Reflection.Emit*` namespaces.
+  - Assembly references beginning with `System.Reflection.Emit*`.
+  - Member references to `Compile()` under `System.Linq.Expressions*` (indicative of JITting expressions).
+- **Enforcement**:
+  - Runs automatically when `AssemblySecurityPolicy.Strict` is used.
+  - If any indicators are present, `SecurityViolation` is raised with a descriptive reason and the load is blocked via `SecurityException`.
+- **Scope**:
+  - Applies to path-based load flows (including dependency resolution). Name-based loads cannot be preflighted until a file path is known.
+  - Recommendation: prefer path-based `AssemblyContext` or resolve the assembly path early to enable preflight before loading.
+- **Limitations**:
+  - Metadata scanning cannot detect runtime decisions (e.g., late reflection via strings or obfuscation).
+  - Does not prevent other code in-process from generating dynamic code; use isolation for stronger guarantees.
+
+Example:
+
+```csharp
+// Strict policy automatically runs preflight and blocks risky assemblies
+var context = new AssemblyContext(
+    pluginPath,
+    basePathRestriction: pluginDir,
+    securityPolicy: AssemblySecurityPolicy.Strict);
+
+context.SecurityViolation += (path, reason) =>
+{
+    logger.LogWarning("Preflight violation: {Reason} at {Path}", reason, path);
+};
+```
+
 ## Global Dynamic Assembly Monitoring (Audit-Only)
 
 In addition to local enforcement, v2.1 introduces opt-in global monitoring to improve transparency:
