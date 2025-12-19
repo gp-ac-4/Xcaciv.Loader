@@ -629,6 +629,12 @@ public class AssemblyContext : IAssemblyContext
 
             if (loadedAssembly is not null)
             {
+                // Enforce policy: disallow dynamic/in-memory assemblies when configured
+                if (loadedAssembly.IsDynamic && this.SecurityPolicy.DisallowDynamicAssemblies)
+                {
+                    SecurityViolation?.Invoke(this.FilePath, "Dynamic assemblies are disallowed by security policy.");
+                    throw new SecurityException("Dynamic assemblies are disallowed by security policy.");
+                }
                 this.assemblyName = loadedAssembly.GetName();
                 this.isLoaded = true;
                 
@@ -686,6 +692,12 @@ public class AssemblyContext : IAssemblyContext
             var loadedAssembly = this.loadContext!.LoadFromAssemblyName(this.assemblyName);
             if (loadedAssembly is not null)
             {
+                // Enforce policy: disallow dynamic/in-memory assemblies when configured
+                if (loadedAssembly.IsDynamic && this.SecurityPolicy.DisallowDynamicAssemblies)
+                {
+                    SecurityViolation?.Invoke(this.assemblyName.FullName ?? "Unknown", "Dynamic assemblies are disallowed by security policy.");
+                    throw new SecurityException("Dynamic assemblies are disallowed by security policy.");
+                }
                 this.FilePath = VerifyPath(loadedAssembly.Location, "*", this.SecurityPolicy);
                 this.isLoaded = true;
                 

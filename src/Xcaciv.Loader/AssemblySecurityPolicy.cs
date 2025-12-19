@@ -68,6 +68,12 @@ public class AssemblySecurityPolicy
     public bool StrictMode { get; init; }
     
     /// <summary>
+    /// If true, disallows loading dynamic/in-memory assemblies
+    /// (e.g., ones created via Reflection.Emit like AssemblyBuilder, TypeBuilder, DynamicMethod).
+    /// </summary>
+    public bool DisallowDynamicAssemblies { get; init; }
+    
+    /// <summary>
     /// Gets the read-only list of forbidden directory names (case-insensitive).
     /// </summary>
     /// <remarks>
@@ -99,6 +105,7 @@ public class AssemblySecurityPolicy
     public AssemblySecurityPolicy(bool strictMode = false)
     {
         StrictMode = strictMode;
+        DisallowDynamicAssemblies = strictMode; // Enhanced security in strict mode
         ForbiddenDirectories = strictMode 
             ? StrictForbiddenDirectories 
             : DefaultForbiddenDirectories;
@@ -126,6 +133,7 @@ public class AssemblySecurityPolicy
         ArgumentNullException.ThrowIfNull(forbiddenDirectories, nameof(forbiddenDirectories));
         
         StrictMode = false; // Custom policy
+        DisallowDynamicAssemblies = false;
         ForbiddenDirectories = forbiddenDirectories;
     }
     
