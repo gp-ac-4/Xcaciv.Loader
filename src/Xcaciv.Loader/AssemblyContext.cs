@@ -20,6 +20,11 @@ namespace Xcaciv.Loader;
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)]
 public class AssemblyContext : IAssemblyContext
 {
+    // Global dynamic assembly monitoring (opt-in per context)
+    private static readonly object globalMonitorLock = new();
+    private static bool globalMonitorSubscribed = false;
+    private static readonly List<WeakReference<AssemblyContext>> globalMonitorSubscribers = new();
+
     /// <summary>
     /// Used by disposal - tracks whether Dispose has been called
     /// </summary>
@@ -463,6 +468,92 @@ public class AssemblyContext : IAssemblyContext
         loadContext = new AssemblyLoadContext(fullName, isCollectible);
         this.loadContext.Resolving += LoadContext_Resolving;
         this.isLoaded = false;
+    }
+
+    /// <summary>
+    /// Enables opt-in global monitoring of dynamic (in-memory) assemblies created anywhere in the AppDomain.
+    /// When enabled, this context will raise <see cref="SecurityViolation"/> when a dynamic assembly is observed
+    /// and this context's <see cref="SecurityPolicy"/> disallows dynamic assemblies. This is audit-only.
+    /// </summary>
+    public void EnableGlobalDynamicAssemblyMonitoring()
+    {
+        ThrowIfDisposed();
+        lock (globalMonitorLock)
+        {
+            // Avoid duplicate entries
+            if (!globalMonitorSubscribers.Any(wr => wr.TryGetTarget(out var target) && ReferenceEquals(target, this)))
+            {
+                globalMonitorSubscribers.Add(new WeakReference<AssemblyContext>(this));
+            }
+
+            if (!globalMonitorSubscribed)
+            {
+                AppDomain.CurrentDomain.AssemblyLoad += GlobalAssemblyLoadHandler;
+                globalMonitorSubscribed = true;
+            }
+        }
+    }
+
+    private static void GlobalAssemblyLoadHandler(object? sender, AssemblyLoadEventArgs args)
+    {
+        try
+        {
+            if (args.LoadedAssembly is null || !args.LoadedAssembly.IsDynamic)
+                return;
+
+            var identifier = String.IsNullOrWhiteSpace(args.LoadedAssembly.Location)
+                ? (args.LoadedAssembly.FullName ?? "<dynamic>")
+                : args.LoadedAssembly.Location;
+
+            lock (globalMonitorLock)
+            {
+                for (int i = globalMonitorSubscribers.Count - 1; i >= 0; i--)
+                {
+                    if (!globalMonitorSubscribers[i].TryGetTarget(out var ctx) || ctx is null)
+                    {
+                        globalMonitorSubscribers.RemoveAt(i);
+                        continue;
+                    }
+
+                    // Raise only for contexts that disallow dynamic assemblies
+                    if (ctx.SecurityPolicy.DisallowDynamicAssemblies)
+                    {
+                        ctx.SecurityViolation?.Invoke(identifier, "Global monitor: Dynamic assembly load detected.");
+                    }
+                }
+
+                // If no subscribers remain, detach the handler
+                if (globalMonitorSubscribers.Count == 0 && globalMonitorSubscribed)
+                {
+                    AppDomain.CurrentDomain.AssemblyLoad -= GlobalAssemblyLoadHandler;
+                    globalMonitorSubscribed = false;
+                }
+            }
+        }
+        catch
+        {
+            // Swallow to avoid impacting application load flow; audit-only
+        }
+    }
+
+    private static void RemoveGlobalSubscriber(AssemblyContext ctx)
+    {
+        lock (globalMonitorLock)
+        {
+            for (int i = globalMonitorSubscribers.Count - 1; i >= 0; i--)
+            {
+                if (!globalMonitorSubscribers[i].TryGetTarget(out var target) || ReferenceEquals(target, ctx))
+                {
+                    globalMonitorSubscribers.RemoveAt(i);
+                }
+            }
+
+            if (globalMonitorSubscribers.Count == 0 && globalMonitorSubscribed)
+            {
+                AppDomain.CurrentDomain.AssemblyLoad -= GlobalAssemblyLoadHandler;
+                globalMonitorSubscribed = false;
+            }
+        }
     }
     
     /// <summary>
@@ -1272,6 +1363,8 @@ public class AssemblyContext : IAssemblyContext
                 Unload();
                 disposalTokenSource.Cancel();
                 disposalTokenSource.Dispose();
+                // Remove this instance from global monitoring subscribers
+                RemoveGlobalSubscriber(this);
             }
         }
         

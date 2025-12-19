@@ -14,6 +14,13 @@ This directory contains comprehensive documentation for the Xcaciv.Loader librar
   - Defense-in-depth security architecture
   - Installation & usage examples
 
+- **[security-features-v2.md](security-features-v2.md)** - Security features and best practices (v2.0+)
+  - Policies (`Default`, `Strict`, custom)
+  - Dynamic assembly blocking (v2.1+)
+  - Global dynamic monitoring (audit-only)
+  - Path validation & integrity verification
+  - Audit events and recommended practices
+
 ### Migration & Upgrade
 
 - **[MIGRATION-v1-to-v2.md](MIGRATION-v1-to-v2.md)** - Complete migration guide from v1.x to v2.0
@@ -72,6 +79,7 @@ See **[archive/README.md](archive/README.md)** for a complete index of archived 
 1. Read **[spec-ssem-improvement-checklist-20251129.md](spec-ssem-improvement-checklist-20251129.md)** for SSEM implementation details
 2. Review **[V2.0-CONSOLIDATED-RELEASE.md](V2.0-CONSOLIDATED-RELEASE.md)** for architecture overview
 3. Check **[archive/trust-001-implementation-summary.md](archive/trust-001-implementation-summary.md)** for integrity verification internals
+
 - Test categories and scenarios
 - Coverage matrix
 - Test patterns used
@@ -84,9 +92,11 @@ See **[archive/README.md](archive/README.md)** for a complete index of archived 
 ### User Documents
 
 #### MIGRATION-v1-to-v2.md
+
 **Purpose:** Help users migrate to v2.0  
 **Audience:** Library consumers, developers  
 **Contents:**
+
 - 12 detailed sections
 - Breaking changes explained
 - Before/after code examples
@@ -101,6 +111,7 @@ See **[archive/README.md](archive/README.md)** for a complete index of archived 
 ## Reading Paths
 
 ### Path 1: Executive Overview
+
 For management or stakeholders wanting high-level overview:
 
 1. **phase1-progress-visual.txt** - Quick status
@@ -112,6 +123,7 @@ For management or stakeholders wanting high-level overview:
 ---
 
 ### Path 2: Technical Deep Dive
+
 For developers wanting complete technical understanding:
 
 1. **spec-ssem-improvement-checklist-20251129.md** - Understand scope
@@ -124,6 +136,7 @@ For developers wanting complete technical understanding:
 ---
 
 ### Path 3: User Migration
+
 For consumers upgrading their applications:
 
 1. **MIGRATION-v1-to-v2.md** - Complete migration guide
@@ -135,6 +148,7 @@ For consumers upgrading their applications:
 ---
 
 ### Path 4: Test Development
+
 For developers writing or reviewing tests:
 
 1. **trust-001-test-implementation-summary.md** - Test coverage
@@ -185,13 +199,16 @@ spec-ssem-improvement-checklist-20251129.md (MASTER)
 ## Additional Resources
 
 ### In Repository Root
+
 - **README.md** - Project overview and basic usage
 - **CHANGELOG.md** - v2.0 release notes and history
 
 ### In src/Xcaciv.Loader/
+
 - **readme.md** - Detailed user documentation with examples
 
 ### In src/Xcaciv.LoaderTests/
+
 - **Test files** - Actual test implementations (best documentation for API usage)
 
 ---
@@ -201,20 +218,24 @@ spec-ssem-improvement-checklist-20251129.md (MASTER)
 ### When to Update
 
 **spec-ssem-improvement-checklist-20251129.md:**
+
 - When completing an item (mark as COMPLETED)
 - When starting a new phase
 - When SSEM scores change
 
 **phase1-final-summary.md:**
+
 - Generally static after Phase 1 completion
 - Update only for corrections
 
 **trust-001-*.md:**
+
 - Update for implementation changes
 - Add notes for discovered issues
 - Update test counts as tests are added
 
 **MIGRATION-v1-to-v2.md:**
+
 - Add new migration scenarios as discovered
 - Update FAQ as questions arise
 - Add troubleshooting tips
@@ -224,6 +245,7 @@ spec-ssem-improvement-checklist-20251129.md (MASTER)
 ## Questions?
 
 For questions about:
+
 - **Implementation:** See trust-001-implementation-summary.md
 - **Testing:** See trust-001-test-implementation-summary.md
 - **Migration:** See MIGRATION-v1-to-v2.md
@@ -235,6 +257,7 @@ For questions about:
 ## Quick Reference
 
 ### Current Status
+
 - **Phase 1:** COMPLETE (100%)
 - **SSEM Score:** 8.8/10 (was 8.0/10)
 - **Build Status:** SUCCESS
@@ -244,18 +267,22 @@ For questions about:
 ### Key Files by Role
 
 **Project Manager:**
+
 - phase1-progress-visual.txt
 - phase1-final-summary.md
 
 **Developer:**
+
 - spec-ssem-improvement-checklist-20251129.md
 - trust-001-implementation-summary.md
 
 **QA Engineer:**
+
 - trust-001-test-implementation-summary.md
 - Test files in src/Xcaciv.LoaderTests/
 
 **Library Consumer:**
+
 - MIGRATION-v1-to-v2.md
 - src/Xcaciv.Loader/readme.md
 

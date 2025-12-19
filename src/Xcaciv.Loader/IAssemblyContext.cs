@@ -77,4 +77,17 @@ public interface IAssemblyContext : IDisposable, IAsyncDisposable
     /// </summary>
     /// <returns>A task that completes when the unload operation is done</returns>
     Task<bool> UnloadAsync();
+
+    /// <summary>
+    /// Enables opt-in global monitoring of dynamic (in-memory) assemblies created
+    /// anywhere in the AppDomain. When enabled, this context will raise
+    /// <c>SecurityViolation</c> events when a dynamic assembly is observed and the
+    /// context's security policy disallows dynamic assemblies.
+    /// </summary>
+    /// <remarks>
+    /// This is an audit-only mechanism; global monitoring cannot prevent emit operations
+    /// and does not throw. For enforcement, the context already blocks dynamic assemblies
+    /// it loads when <c>DisallowDynamicAssemblies</c> is enabled.
+    /// </remarks>
+    void EnableGlobalDynamicAssemblyMonitoring();
 }
