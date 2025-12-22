@@ -21,7 +21,7 @@ public class GlobalDynamicAssemblyMonitoringTests
     public void EnableGlobalDynamicAssemblyMonitoring_WithStrictPolicy_RaisesSecurityViolation()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_strict_" + Guid.NewGuid() + ".dll");
         var securityViolationRaised = false;
         var violationId = string.Empty;
         
@@ -62,8 +62,20 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
         }
     }
 
@@ -71,7 +83,7 @@ public class GlobalDynamicAssemblyMonitoringTests
     public void EnableGlobalDynamicAssemblyMonitoring_WithDefaultPolicy_NoSecurityViolation()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_default_" + Guid.NewGuid() + ".dll");
         var securityViolationRaised = false;
         
         try
@@ -104,8 +116,20 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
         }
     }
 
@@ -156,10 +180,25 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath1))
-                File.Delete(testPath1);
+            {
+                try
+                {
+                    File.Delete(testPath1);
+                }
+                catch { }
+            }
             if (File.Exists(testPath2))
-                File.Delete(testPath2);
+            {
+                try
+                {
+                    File.Delete(testPath2);
+                }
+                catch { }
+            }
         }
     }
 
@@ -207,8 +246,17 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch { }
+            }
         }
     }
 
@@ -275,7 +323,7 @@ public class GlobalDynamicAssemblyMonitoringTests
     public void EnableGlobalDynamicAssemblyMonitoring_EventMessage_ContainsIdentifier()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_msg_" + Guid.NewGuid() + ".dll");
         var receivedMessage = string.Empty;
         
         try
@@ -307,8 +355,17 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch { }
+            }
         }
     }
 
@@ -320,7 +377,7 @@ public class GlobalDynamicAssemblyMonitoringTests
     public void EnableGlobalDynamicAssemblyMonitoring_OnDisposedContext_ThrowsObjectDisposedException()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_disposed_" + Guid.NewGuid() + ".dll");
         try
         {
             File.WriteAllText(testPath, "test");
@@ -337,8 +394,17 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch { }
+            }
         }
     }
 
@@ -350,7 +416,7 @@ public class GlobalDynamicAssemblyMonitoringTests
     public void EnableGlobalDynamicAssemblyMonitoring_CallMultipleTimes_NoDuplicates()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_dup_" + Guid.NewGuid() + ".dll");
         var violationCount = 0;
         
         try
@@ -380,8 +446,17 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch { }
+            }
         }
     }
 
@@ -395,7 +470,7 @@ public class GlobalDynamicAssemblyMonitoringTests
         // This test simulates loading a risky assembly and monitoring for dynamic behavior
         
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_risky_" + Guid.NewGuid() + ".dll");
         var violations = new List<string>();
         
         try
@@ -429,8 +504,17 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch { }
+            }
         }
     }
 
@@ -440,7 +524,7 @@ public class GlobalDynamicAssemblyMonitoringTests
         // This test simulates monitoring when a risky assembly with LINQ.Expressions.Compile is executed
         
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_linq_" + Guid.NewGuid() + ".dll");
         var violations = new List<string>();
         
         try
@@ -475,8 +559,17 @@ public class GlobalDynamicAssemblyMonitoringTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch { }
+            }
         }
     }
 

@@ -66,7 +66,7 @@ public class DisallowDynamicAssembliesTests
     public void AssemblyContext_WithDefaultPolicy_AllowsDynamicAssemblies()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_default_" + Guid.NewGuid() + ".dll");
         try
         {
             File.WriteAllText(testPath, "test");
@@ -80,8 +80,20 @@ public class DisallowDynamicAssembliesTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
         }
     }
 
@@ -89,7 +101,7 @@ public class DisallowDynamicAssembliesTests
     public void AssemblyContext_WithStrictPolicy_DisallowsDynamicAssemblies()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_strict_" + Guid.NewGuid() + ".dll");
         try
         {
             File.WriteAllText(testPath, "test");
@@ -106,8 +118,21 @@ public class DisallowDynamicAssembliesTests
         }
         finally
         {
+            // Ensure context is fully disposed
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
         }
     }
 
@@ -115,7 +140,7 @@ public class DisallowDynamicAssembliesTests
     public void AssemblyContext_WithCustomPolicy_RespectsConfiguration()
     {
         // Arrange
-        var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
+        var testPath = Path.Combine(Path.GetTempPath(), "test_custom_" + Guid.NewGuid() + ".dll");
         var customPolicy = new AssemblySecurityPolicy(new[] { "custom" });
         try
         {
@@ -133,8 +158,20 @@ public class DisallowDynamicAssembliesTests
         }
         finally
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            
             if (File.Exists(testPath))
-                File.Delete(testPath);
+            {
+                try
+                {
+                    File.Delete(testPath);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            }
         }
     }
 
