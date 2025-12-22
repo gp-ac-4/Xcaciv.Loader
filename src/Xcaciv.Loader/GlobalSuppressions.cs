@@ -4,6 +4,9 @@
 // a specific target and scoped to a namespace, type, member, etc.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Xc.LoaderTests")]
 
 [assembly: SuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Purpose of class is to load unrefrenced code.", Scope = "member", Target = "~M:Xcaciv.Loader.AssemblyContext.LoadFromPath(System.String,System.String,System.Boolean)~Xcaciv.Loader.IAssemblyContext")]
 [assembly: SuppressMessage("Trimming", "IL2072:Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' in call to target method. The return value of the source method does not have matching annotations.", Justification = "Purpose of class is to load unrefrenced code.", Scope = "member", Target = "~M:Xcaciv.Loader.AssemblyContext.CreateInstance(System.String)~System.Object")]

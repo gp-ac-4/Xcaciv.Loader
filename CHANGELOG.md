@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Comprehensive Testing for Dynamic Assembly Monitoring**:
+  - New test project `zTestRiskyAssembly`: Assembly demonstrating Reflection.Emit usage for testing workflows
+  - New test project `zTestLinqExpressions`: Assembly demonstrating LINQ Expressions Compile usage for testing workflows
+  - Comprehensive test suite `GlobalDynamicAssemblyMonitoringTests` with 15+ tests covering:
+    - Basic monitoring functionality with Strict vs Default policies
+    - Multi-context monitoring with independent violation tracking
+    - Weak reference cleanup and disposed context handling
+    - Concurrency and thread-safety of EnableGlobalDynamicAssemblyMonitoring
+    - Event message content verification
+    - Duplicate subscription prevention
+    - Integration tests with actual risky assemblies
+  - Comprehensive test suite `DisallowDynamicAssembliesTests` with 13+ tests covering:
+    - Policy configuration (Strict, Default, Custom)
+    - Context configuration with different policies
+    - Multi-context isolation
+    - Policy inheritance in strict mode
+
 ### Changed
+- Added `InternalsVisibleTo` attribute to allow test projects to access internal `AssemblyPreflightAnalyzer` functionality
 - Refactored `MergeFromFile` in `AssemblyHashStore` to use explicit LINQ `Where` filter for better code clarity
 - Improved condition logic in `UnloadAsync` method to fix always-false evaluation issue
 - Minor documentation updates in readme
@@ -15,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed always-false condition in `UnloadAsync` method that could prevent proper cleanup
 - Improved LINQ query readability in `AssemblyHashStore.MergeFromFile`
+
+### Testing
+- New test assembly projects for workflow testing:
+  - `zTestRiskyAssembly.DynamicTypeCreator`: Creates dynamic types using AssemblyBuilder and TypeBuilder
+  - `zTestLinqExpressions.ExpressionCompiler`: Compiles LINQ expression trees at runtime
+- 28+ new tests for dynamic assembly monitoring and policies
+- Test coverage for edge cases: disposed contexts, concurrent calls, weak reference cleanup
+- Integration tests demonstrating real-world usage patterns
 
 ---
 

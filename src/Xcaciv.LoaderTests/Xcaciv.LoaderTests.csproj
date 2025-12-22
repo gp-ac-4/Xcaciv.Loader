@@ -33,5 +33,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Xcaciv.Loader\Xcaciv.Loader.csproj" />
     <ProjectReference Include="..\zTestInterfaces\zTestInterfaces.csproj" />
+    <ProjectReference Include="..\zTestRiskyAssembly\zTestRiskyAssembly.csproj" />
+    <ProjectReference Include="..\zTestLinqExpressions\zTestLinqExpressions.csproj" />
   </ItemGroup>
 </Project>
