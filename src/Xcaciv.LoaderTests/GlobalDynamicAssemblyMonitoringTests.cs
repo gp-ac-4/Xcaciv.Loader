@@ -255,7 +255,14 @@ public class GlobalDynamicAssemblyMonitoringTests
                 {
                     File.Delete(testPath);
                 }
-                catch { }
+                catch (IOException ex)
+                {
+                    Console.Error.WriteLine($"Failed to delete test file '{testPath}' due to I/O error: {ex.Message}");
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    Console.Error.WriteLine($"Failed to delete test file '{testPath}' due to access restrictions: {ex.Message}");
+                }
             }
         }
     }
