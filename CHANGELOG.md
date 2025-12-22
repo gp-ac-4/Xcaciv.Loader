@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.1.0] - 2025-12-19
+## [2.1.0] - 2025-12-22
 
 ### Added
 - New security policy flag: `AssemblySecurityPolicy.DisallowDynamicAssemblies` to prohibit loading dynamic/in-memory assemblies (e.g., created via Reflection.Emit such as `AssemblyBuilder`, `TypeBuilder`, `DynamicMethod`).
