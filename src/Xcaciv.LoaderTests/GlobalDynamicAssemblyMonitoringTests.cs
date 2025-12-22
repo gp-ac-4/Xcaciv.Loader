@@ -495,7 +495,7 @@ public class GlobalDynamicAssemblyMonitoringTests
             
             // The risky assembly creates dynamic types
             var risky = new zTestRiskyAssembly.DynamicTypeCreator();
-            var result = risky.Stuff("test");
+            _ = risky.Stuff("test");
             
             Thread.Sleep(100);
             
