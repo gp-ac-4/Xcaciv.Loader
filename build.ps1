@@ -7,7 +7,13 @@ param(
     [switch]$Test = $false,
     
     [Parameter(Mandatory = $false)]
-    [switch]$Publish = $false
+    [switch]$Publish = $false,
+    
+    [Parameter(Mandatory = $false)]
+    [string]$GitHubPat = "",
+    
+    [Parameter(Mandatory = $false)]
+    [string]$NugetEndpoint = "https://nuget.pkg.github.com/xcaciv"
 )
 
 # Display banner
@@ -74,6 +80,35 @@ if ($Publish) {
         Write-Host "Warning: No NuGet packages found!" -ForegroundColor Yellow
     } else {
         Write-Host "Copied $copiedCount package(s) to publish directory" -ForegroundColor Green
+    }
+    
+    # Push packages to NuGet (GitHub Packages) if PAT provided
+    if ($GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
+        Write-Host "Pushing packages to NuGet (GitHub Packages)..." -ForegroundColor Cyan
+        $normalizedEndpoint = ($NugetEndpoint -replace '\\', '/')
+        if ($normalizedEndpoint -notmatch '/index\.json$') {
+            $sourceUrl = "$normalizedEndpoint/index.json"
+        } else {
+            $sourceUrl = $normalizedEndpoint
+        }
+        $packagesToPush = Get-ChildItem -Path $publishDir -Filter "*.nupkg" -ErrorAction SilentlyContinue
+        if (-not $packagesToPush) {
+            Write-Host "No .nupkg files found to push." -ForegroundColor Yellow
+        } else {
+            foreach ($pkg in $packagesToPush) {
+                $pushCmd = "dotnet nuget push \"$($pkg.FullName)\" --source \"$sourceUrl\" --api-key \"$GitHubPat\" --skip-duplicate"
+                Write-Host "Executing: $pushCmd" -ForegroundColor Gray
+                Invoke-Expression $pushCmd
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "NuGet push failed for $($pkg.Name) with exit code $LASTEXITCODE" -ForegroundColor Red
+                    exit $LASTEXITCODE
+                } else {
+                    Write-Host "  Pushed: $($pkg.Name)" -ForegroundColor Green
+                }
+            }
+        }
+    } else {
+        Write-Host "GitHub PAT not provided; skipping NuGet push." -ForegroundColor Yellow
     }
     
 } else {
