@@ -51,7 +51,7 @@ public class GlobalDynamicAssemblyMonitoringTests
                 AssemblyBuilderAccess.Run);
             var moduleBuilder = assemblyBuilder.DefineDynamicModule("DynamicModule");
             var typeBuilder = moduleBuilder.DefineType("DynamicType", TypeAttributes.Public);
-            var dynamicType = typeBuilder.CreateType();
+            typeBuilder.CreateType();
             
             // Give the event handler time to process
             Thread.Sleep(100);
