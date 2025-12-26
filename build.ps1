@@ -27,7 +27,7 @@ Write-Host "====================================================="
 if ($Publish) {
     Write-Host "Mode: Publish (building for .NET 8.0 and .NET 10.0)"
 } elseif ($UseNet10) {
-    Write-Host "Target Framework: Both .NET 8.0 and .NET 10.0"
+    Write-Host "Building for both .NET 8.0 and .NET 10.0"
 } else {
     Write-Host "Target Framework: .NET 8.0"
 }
