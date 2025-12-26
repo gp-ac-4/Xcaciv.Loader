@@ -18,7 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		build.ps1 = build.ps1
 		CHANGELOG.md = CHANGELOG.md
 		src\Directory.Packages.props = src\Directory.Packages.props
-		tmp\qol_enhansements.txt = tmp\qol_enhansements.txt
+		tmp\qol_enhancements.txt = tmp\qol_enhancements.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Xcaciv.LoaderTests", "src\Xcaciv.LoaderTests\Xcaciv.LoaderTests.csproj", "{E61399D8-2419-4CD1-86BF-C3E039C8FCB4}"
