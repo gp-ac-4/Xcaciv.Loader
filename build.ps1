@@ -215,17 +215,13 @@ if ($Test) {
     }
 }
 
-# Push packages to NuGet (GitHub Packages) if PAT provided
-if ($GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
+# Push packages to NuGet (GitHub Packages) only when publishing and PAT provided
+if ($Publish -and $GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
     Write-Host "====================================================="
     Write-Host "Pushing packages to NuGet (GitHub Packages)..." -ForegroundColor Cyan
     
-    # Determine package source directory
-    if ($Publish) {
-        $packageSourceDir = Join-Path $PSScriptRoot "publish"
-    } else {
-        $packageSourceDir = Join-Path $PSScriptRoot "src\Xcaciv.Loader\bin\Release"
-    }
+    # Use publish output directory as package source
+    $packageSourceDir = Join-Path $PSScriptRoot "publish"
     
     $normalizedEndpoint = ($NugetEndpoint -replace '\\', '/')
     if ($normalizedEndpoint -notmatch '/index\.json$') {
