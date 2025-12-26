@@ -243,7 +243,14 @@ if ($Publish -and $GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
                 '--api-key',$GitHubPat,
                 '--skip-duplicate'
             )
-            Write-Host "Executing: dotnet $($pushArgs -join ' ')" -ForegroundColor Gray
+            $loggingArgs = $pushArgs.Clone()
+            for ($i = 0; $i -lt $loggingArgs.Length; $i++) {
+                if ($loggingArgs[$i] -eq '--api-key' -and ($i + 1) -lt $loggingArgs.Length) {
+                    $loggingArgs[$i + 1] = '***REDACTED***'
+                    break
+                }
+            }
+            Write-Host "Executing: dotnet $($loggingArgs -join ' ')" -ForegroundColor Gray
             # Execute and capture output to detect specific warnings-as-errors
             $pushOutput = & dotnet $pushArgs 2>&1
             # Echo output to console
