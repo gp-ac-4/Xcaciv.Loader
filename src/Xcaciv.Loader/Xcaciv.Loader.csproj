@@ -1,10 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Target Framework -->
-    <TargetFramework>net8.0</TargetFramework>
-    <!-- Define a property to conditionally switch to .NET 10 -->
-    <UseNet10 Condition="'$(UseNet10)' == ''">false</UseNet10>
-    <TargetFramework Condition="'$(UseNet10)' == 'true'">net10.0</TargetFramework>
+    <!-- Target Frameworks - Build for both .NET 8 and .NET 10 by default -->
+    <TargetFrameworks Condition="'$(UseNet10)' == 'true'">net8.0;net10.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(UseNet10)' != 'true'">net8.0</TargetFrameworks>
     
     <!-- Version Information -->
     <Version>2.1.1</Version>
@@ -97,10 +95,7 @@ See CHANGELOG.md for complete details and migration guide.
   
   <!-- Package Content -->
   <ItemGroup>
-    <None Update="readme.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
+    <None Include="readme.md" Pack="true" PackagePath="\" />
   </ItemGroup>
   
   <!-- Source Link Package -->

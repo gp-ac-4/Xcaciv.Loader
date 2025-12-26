@@ -28,11 +28,16 @@ Write-Host "====================================================="
 Write-Host "Xcaciv.Loader Build Script"
 Write-Host "====================================================="
 if ($Publish) {
-    Write-Host "Mode: Publish (building for .NET 8.0 and .NET 10.0)" -ForegroundColor Cyan
+    Write-Host "Mode: Publish" -ForegroundColor Cyan
+    if ($UseNet10) {
+        Write-Host "Target Frameworks: .NET 8.0 and .NET 10.0" -ForegroundColor Cyan
+    } else {
+        Write-Host "Target Framework: .NET 8.0 only" -ForegroundColor Cyan
+    }
 } elseif ($UseNet10) {
-    Write-Host "Target Framework: Both .NET 8.0 and .NET 10.0"
+    Write-Host "Target Frameworks: .NET 8.0 and .NET 10.0"
 } else {
-    Write-Host "Target Framework: .NET 8.0"
+    Write-Host "Target Framework: .NET 8.0 only"
 }
 Write-Host "Run Tests: $( if ($Test) { "Yes" } else { "No" } )"
 Write-Host "Local NuGet path: $LocalNugetPath"
@@ -43,28 +48,23 @@ if ($Publish) {
 }
 Write-Host "====================================================="
 
-if ($Publish) {
-    # Publish mode: Build for both .NET 8 and .NET 10
-    Write-Host "Building for .NET 8.0..." -ForegroundColor Cyan
-    $buildCommand = "dotnet build --configuration Release"
-    Write-Host "Executing: $buildCommand" -ForegroundColor Gray
-    Invoke-Expression $buildCommand
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Build failed for .NET 8.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-        exit $LASTEXITCODE
-    }
-    
-    Write-Host "Building for .NET 10.0..." -ForegroundColor Cyan
+# Build
+Write-Host "Building solution..." -ForegroundColor Cyan
+if ($UseNet10) {
     $buildCommand = "dotnet build --configuration Release /p:UseNet10=true"
-    Write-Host "Executing: $buildCommand" -ForegroundColor Gray
-    Invoke-Expression $buildCommand
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Build failed for .NET 10.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-        exit $LASTEXITCODE
-    }
-    
+} else {
+    $buildCommand = "dotnet build --configuration Release"
+}
+Write-Host "Executing: $buildCommand" -ForegroundColor Gray
+Invoke-Expression $buildCommand
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
+    exit $LASTEXITCODE
+}
+
+# If publishing, copy packages to publish directory
+if ($Publish) {
     # Create publish directory
     $publishDir = Join-Path $PSScriptRoot "publish"
     if (Test-Path $publishDir) {
@@ -97,7 +97,7 @@ if ($Publish) {
         Write-Host "Copied $copiedCount package(s) to publish directory" -ForegroundColor Green
     }
 
-    # Mandatory local copy to NuGet packages directory (only if directory exists)
+    # Copy to local NuGet packages directory
     if ([string]::IsNullOrWhiteSpace($LocalNugetPath)) {
         Write-Host "Warning: LocalNugetPath is not specified, skipping local copy" -ForegroundColor Yellow
     } else {
@@ -126,99 +126,21 @@ if ($Publish) {
             exit 1
         }
     }
-    
-} else {
-    # Standard build mode
-    if ($UseNet10) {
-        # Build for both .NET 8 and .NET 10
-        Write-Host "Building for .NET 8.0..." -ForegroundColor Cyan
-        $buildCommand = "dotnet build --configuration Release"
-        Write-Host "Executing: $buildCommand" -ForegroundColor Gray
-        Invoke-Expression $buildCommand
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Build failed for .NET 8.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-        
-        Write-Host "Building for .NET 10.0..." -ForegroundColor Cyan
-        $buildCommand = "dotnet build --configuration Release /p:UseNet10=true"
-        Write-Host "Executing: $buildCommand" -ForegroundColor Gray
-        Invoke-Expression $buildCommand
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Build failed for .NET 10.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-    } else {
-        # Build for .NET 8 only
-        Write-Host "Building solution..." -ForegroundColor Cyan
-        $buildCommand = "dotnet build --configuration Release"
-        Write-Host "Executing: $buildCommand" -ForegroundColor Gray
-        Invoke-Expression $buildCommand
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-    }
 }
 
 # Run tests if requested
 if ($Test) {
-    if ($Publish) {
-        # Run tests for both frameworks
-        Write-Host "Running tests for .NET 8.0..." -ForegroundColor Cyan
-        $testCommand = "dotnet test --no-build --configuration Release"
-        Write-Host "Executing: $testCommand" -ForegroundColor Gray
-        Invoke-Expression $testCommand
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Tests failed for .NET 8.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-        
-        Write-Host "Running tests for .NET 10.0..." -ForegroundColor Cyan
-        $testCommand = "dotnet test --no-build --configuration Release /p:UseNet10=true"
-        Write-Host "Executing: $testCommand" -ForegroundColor Gray
-        Invoke-Expression $testCommand
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Tests failed for .NET 10.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-    } elseif ($UseNet10) {
-        # Run tests for both frameworks
-        Write-Host "Running tests for .NET 8.0..." -ForegroundColor Cyan
-        $testCommand = "dotnet test --no-build --configuration Release"
-        Write-Host "Executing: $testCommand" -ForegroundColor Gray
-        Invoke-Expression $testCommand
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Tests failed for .NET 8.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-        
-        Write-Host "Running tests for .NET 10.0..." -ForegroundColor Cyan
-        $testCommand = "dotnet test --no-build --configuration Release /p:UseNet10=true"
-        Write-Host "Executing: $testCommand" -ForegroundColor Gray
-        Invoke-Expression $testCommand
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Tests failed for .NET 10.0 with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
-    } else {
-        # Standard test mode (.NET 8 only)
-        Write-Host "Running tests..." -ForegroundColor Cyan
-        $testCommand = "dotnet test --no-build --configuration Release"
-        Write-Host "Executing: $testCommand" -ForegroundColor Gray
-        Invoke-Expression $testCommand
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Tests failed with exit code $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
-        }
+    Write-Host "Running tests..." -ForegroundColor Cyan
+    $testCommand = "dotnet test --no-build --configuration Release"
+    if ($UseNet10) {
+        $testCommand += " /p:UseNet10=true"
+    }
+    Write-Host "Executing: $testCommand" -ForegroundColor Gray
+    Invoke-Expression $testCommand
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Tests failed with exit code $LASTEXITCODE" -ForegroundColor Red
+        exit $LASTEXITCODE
     }
 }
 
@@ -271,16 +193,15 @@ if ($Publish) {
     }
 }
 
+# Final summary
+Write-Host "====================================================="
 if ($Publish) {
-    Write-Host "====================================================="
     Write-Host "Publish completed successfully!" -ForegroundColor Green
     Write-Host "Packages available in: $(Join-Path $PSScriptRoot 'publish')" -ForegroundColor Cyan
     if (-not [string]::IsNullOrWhiteSpace($LocalNugetPath)) {
         Write-Host "Local packages copied to: $LocalNugetPath" -ForegroundColor Cyan
     }
-    Write-Host "====================================================="
 } else {
-    Write-Host "====================================================="
     Write-Host "Build completed successfully!" -ForegroundColor Green
-    Write-Host "====================================================="
 }
+Write-Host "====================================================="
