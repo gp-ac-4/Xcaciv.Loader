@@ -361,12 +361,16 @@ public class ThreadSafetyTests
         var task2 = Task.Run(() => context.CreateInstance("Class1"));
         var task3 = Task.Run(() => context.GetTypes());
         
-        await Task.WhenAll(task1, task2, Task.Run(() => task3.Result));
+        await Task.WhenAll(task1, task2, task3);
         
         // Assert
-        Assert.NotNull(task1.Result);
-        Assert.NotNull(task2.Result);
-        Assert.NotNull(task3.Result);
+        var result1 = await task1;
+        var result2 = await task2;
+        var result3 = await task3;
+        
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.NotNull(result3);
         
         output.WriteLine("Concurrent CreateInstance with different signatures completed successfully");
     }
@@ -398,9 +402,9 @@ public class ThreadSafetyTests
             }
         });
         
-        var disposeTask = Task.Run(() =>
+        var disposeTask = Task.Run(async () =>
         {
-            Thread.Sleep(5); // Give operation a tiny head start
+            await Task.Delay(5); // Give operation a tiny head start
             context.Dispose();
         });
         
