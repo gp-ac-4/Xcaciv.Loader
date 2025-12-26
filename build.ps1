@@ -257,10 +257,9 @@ if ($Publish -and $GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
             if ($pushOutput) { $pushOutput | ForEach-Object { Write-Host $_ } }
             
             if ($LASTEXITCODE -ne 0) {
-                # Ignore NU1510 warnings treated as errors
+                # NU1510 indicates a signing or trust issue; log explicit context but still treat as an error
                 if ($pushOutput -match 'NU1510') {
-                    Write-Host "NuGet push reported NU1510; treating as warning and continuing." -ForegroundColor Yellow
-                    continue
+                    Write-Host "NuGet push reported NU1510 (signing or trust issue). Failing build; verify package signing and source trust configuration." -ForegroundColor Red
                 }
                 Write-Host "NuGet push failed for $($pkg.Name) with exit code $LASTEXITCODE" -ForegroundColor Red
                 exit $LASTEXITCODE
