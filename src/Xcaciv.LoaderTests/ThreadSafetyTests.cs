@@ -459,7 +459,13 @@ public class ThreadSafetyTests
         
         // Assert
         Assert.All(results, types => Assert.NotNull(types));
-        Assert.All(results, types => Assert.NotEmpty(types));
+        Assert.All(results, types =>
+        {
+            if (types is not null)
+            {
+                Assert.NotEmpty(types);
+            }
+        });
         
         // All results should have the same count
         var firstCount = results[0]!.Count();

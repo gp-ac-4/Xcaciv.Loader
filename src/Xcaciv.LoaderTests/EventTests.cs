@@ -340,8 +340,6 @@ public class EventTests
     public void Constructor_WildcardRestriction_RaisesWildcardEvent()
     {
         // Arrange
-        bool eventFired = false;
-        string? capturedPath = null;
         var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
         
         File.WriteAllText(testPath, "dummy");

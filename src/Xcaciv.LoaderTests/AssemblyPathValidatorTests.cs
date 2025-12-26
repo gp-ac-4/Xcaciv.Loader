@@ -113,11 +113,20 @@ public class AssemblyPathValidatorTests
         Assert.Contains("OtherPlugins", result);
     }
 
+    [Fact]
+    public void IsSafePath_Null_ReturnsFalse()
+    {
+        // Act
+        var result = AssemblyPathValidator.IsSafePath(null!);
+
+        // Assert
+        Assert.False(result);
+    }
+
     [Theory]
-    [InlineData(null, false)]
     [InlineData("", false)]
     [InlineData("   ", false)]
-    public void IsSafePath_NullOrEmpty_ReturnsFalse(string path, bool expected)
+    public void IsSafePath_EmptyOrWhitespace_ReturnsFalse(string path, bool expected)
     {
         // Act
         var result = AssemblyPathValidator.IsSafePath(path);

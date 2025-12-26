@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Xc.LoaderTests;
 
-public class AssemblyHashStoreTests
+public class AssemblyHashStoreTests : IDisposable
 {
     private readonly string tempDirectory;
     private readonly string testCsvPath;

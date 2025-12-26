@@ -146,8 +146,6 @@ public class SecurityViolationTests
     public void Constructor_WildcardRestriction_RaisesSecurityWarning()
     {
         // Arrange
-        bool eventFired = false;
-        string? capturedPath = null;
         var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
         
         // Create a dummy file for testing
@@ -157,19 +155,6 @@ public class SecurityViolationTests
         {
             // Act
             using var context = new AssemblyContext(testPath, basePathRestriction: "*");
-            context.WildcardPathRestrictionUsed += (path) =>
-            {
-                eventFired = true;
-                capturedPath = path;
-            };
-            
-            // Trigger the event by creating a new context
-            using var context2 = new AssemblyContext(testPath, basePathRestriction: "*");
-            context2.WildcardPathRestrictionUsed += (path) =>
-            {
-                eventFired = true;
-                capturedPath = path;
-            };
             
             // The event should have been raised during construction
             // but we subscribed after, so let's test it properly
@@ -180,17 +165,14 @@ public class SecurityViolationTests
                 File.Delete(testPath);
         }
         
-        // Assert - Event subscription after construction won't capture it,
-        // but the context was created successfully with wildcard
-        Assert.True(true); // Constructor didn't throw
+        // Assert - Constructor didn't throw
+        Assert.True(true);
     }
 
     [Fact]
     public void Constructor_WildcardRestriction_EventFiresDuringConstruction()
     {
         // Arrange
-        bool eventFired = false;
-        string? capturedPath = null;
         var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
         
         // Create a dummy file
@@ -200,13 +182,6 @@ public class SecurityViolationTests
         {
             // Act
             var context = new AssemblyContext(testPath, basePathRestriction: "*");
-            
-            // Subscribe after construction
-            context.WildcardPathRestrictionUsed += (path) =>
-            {
-                eventFired = true;
-                capturedPath = path;
-            };
             
             // Assert - Event was raised during construction, but we subscribed after
             // The important thing is the constructor succeeded with wildcard
@@ -311,10 +286,6 @@ public class SecurityViolationTests
     public void LoadFromPath_ForbiddenDirectory_RaisesSecurityViolationEvent()
     {
         // Arrange
-        bool eventFired = false;
-        string? capturedPath = null;
-        string? capturedReason = null;
-        
         var systemPath = @"C:\Windows\System32\kernel32.dll";
         var tempDir = Path.GetTempPath();
         var testPath = Path.Combine(tempDir, "test.dll");
@@ -324,12 +295,6 @@ public class SecurityViolationTests
         try
         {
             using var context = new AssemblyContext(testPath, basePathRestriction: tempDir);
-            context.SecurityViolation += (path, reason) =>
-            {
-                eventFired = true;
-                capturedPath = path;
-                capturedReason = reason;
-            };
             
             // Act & Assert
             // Try to verify a forbidden path

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Xc.LoaderTests;
 
-public class AssemblyIntegrityVerifierTests
+public class AssemblyIntegrityVerifierTests : IDisposable
 {
     private readonly string tempDirectory;
     private readonly string testAssemblyPath;

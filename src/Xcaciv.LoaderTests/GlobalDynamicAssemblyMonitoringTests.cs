@@ -272,7 +272,7 @@ public class GlobalDynamicAssemblyMonitoringTests
     #region Concurrency Tests
 
     [Fact]
-    public void EnableGlobalDynamicAssemblyMonitoring_ConcurrentCalls_ThreadSafe()
+    public async Task EnableGlobalDynamicAssemblyMonitoring_ConcurrentCalls_ThreadSafe()
     {
         // Arrange
         var testPath = Path.Combine(Path.GetTempPath(), "test.dll");
@@ -309,7 +309,7 @@ public class GlobalDynamicAssemblyMonitoringTests
                 });
             }
             
-            Task.WaitAll(tasks);
+            await Task.WhenAll(tasks);
             
             // Assert
             Assert.Empty(exceptions);
