@@ -13,7 +13,11 @@ param(
     [string]$GitHubPat = "",
     
     [Parameter(Mandatory = $false)]
-    [string]$NugetEndpoint = "https://nuget.pkg.github.com/xcaciv"
+    [string]$NugetEndpoint = "https://nuget.pkg.github.com/xcaciv",
+
+    # Local NuGet packages directory (must exist)
+    [Parameter(Mandatory = $false)]
+    [string]$LocalNugetPath = "G:\NuGetPackages"
 )
 
 # Display banner
@@ -22,10 +26,18 @@ Write-Host "Xcaciv.Loader Build Script"
 Write-Host "====================================================="
 if ($Publish) {
     Write-Host "Mode: Publish (building for .NET 8.0 and .NET 10.0)"
+} elseif ($UseNet10) {
+    Write-Host "Target Framework: Both .NET 8.0 and .NET 10.0"
 } else {
-    Write-Host "Target Framework: $( if ($UseNet10) { ".NET 10.0" } else { ".NET 8.0" } )"
+    Write-Host "Target Framework: .NET 8.0"
 }
 Write-Host "Run Tests: $( if ($Test) { "Yes" } else { "No" } )"
+Write-Host "Local NuGet path: $LocalNugetPath"
+if ($GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
+    Write-Host "NuGet Push: Enabled (GitHub PAT provided)" -ForegroundColor Green
+} else {
+    Write-Host "NuGet Push: Disabled (no GitHub PAT)" -ForegroundColor Yellow
+}
 Write-Host "====================================================="
 
 if ($Publish) {
@@ -81,53 +93,67 @@ if ($Publish) {
     } else {
         Write-Host "Copied $copiedCount package(s) to publish directory" -ForegroundColor Green
     }
-    
-    # Push packages to NuGet (GitHub Packages) if PAT provided
-    if ($GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
-        Write-Host "Pushing packages to NuGet (GitHub Packages)..." -ForegroundColor Cyan
-        $normalizedEndpoint = ($NugetEndpoint -replace '\\', '/')
-        if ($normalizedEndpoint -notmatch '/index\.json$') {
-            $sourceUrl = "$normalizedEndpoint/index.json"
-        } else {
-            $sourceUrl = $normalizedEndpoint
+
+    # Mandatory local copy to NuGet packages directory (only if directory exists)
+    try {
+        $targetLocal = $LocalNugetPath.TrimEnd('\', '/')
+        if (-not (Test-Path -Path $targetLocal -PathType Container)) {
+            Write-Host "ERROR: Local NuGet directory does not exist: $targetLocal" -ForegroundColor Red
+            exit 1
         }
-        $packagesToPush = Get-ChildItem -Path $publishDir -Filter "*.nupkg" -ErrorAction SilentlyContinue
-        if (-not $packagesToPush) {
-            Write-Host "No .nupkg files found to push." -ForegroundColor Yellow
-        } else {
-            foreach ($pkg in $packagesToPush) {
-                $pushCmd = "dotnet nuget push \"$($pkg.FullName)\" --source \"$sourceUrl\" --api-key \"$GitHubPat\" --skip-duplicate"
-                Write-Host "Executing: $pushCmd" -ForegroundColor Gray
-                Invoke-Expression $pushCmd
-                if ($LASTEXITCODE -ne 0) {
-                    Write-Host "NuGet push failed for $($pkg.Name) with exit code $LASTEXITCODE" -ForegroundColor Red
-                    exit $LASTEXITCODE
-                } else {
-                    Write-Host "  Pushed: $($pkg.Name)" -ForegroundColor Green
-                }
-            }
+        Write-Host "Copying packages to local directory: $targetLocal" -ForegroundColor Cyan
+        $localCopied = 0
+        $publishPackages = Get-ChildItem -Path $publishDir -Filter "*.nupkg" -ErrorAction SilentlyContinue
+        $publishSymbols = Get-ChildItem -Path $publishDir -Filter "*.snupkg" -ErrorAction SilentlyContinue
+        foreach ($pkg in @($publishPackages + $publishSymbols)) {
+            Copy-Item -Path $pkg.FullName -Destination $targetLocal -Force
+            Write-Host "  Copied locally: $($pkg.Name)" -ForegroundColor Green
+            $localCopied++
         }
-    } else {
-        Write-Host "GitHub PAT not provided; skipping NuGet push." -ForegroundColor Yellow
+        if ($localCopied -eq 0) {
+            Write-Host "No packages found to copy locally." -ForegroundColor Yellow
+        } else {
+            Write-Host "Copied $localCopied package(s) to local directory: $targetLocal" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "Failed to copy packages locally: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
     }
     
 } else {
     # Standard build mode
-    # Set MSBuild property for .NET 10 if requested
-    $properties = @()
     if ($UseNet10) {
-        $properties += "/p:UseNet10=true"
-    }
+        # Build for both .NET 8 and .NET 10
+        Write-Host "Building for .NET 8.0..." -ForegroundColor Cyan
+        $buildCommand = "dotnet build --configuration Release"
+        Write-Host "Executing: $buildCommand" -ForegroundColor Gray
+        Invoke-Expression $buildCommand
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Build failed for .NET 8.0 with exit code $LASTEXITCODE" -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+        
+        Write-Host "Building for .NET 10.0..." -ForegroundColor Cyan
+        $buildCommand = "dotnet build --configuration Release /p:UseNet10=true"
+        Write-Host "Executing: $buildCommand" -ForegroundColor Gray
+        Invoke-Expression $buildCommand
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Build failed for .NET 10.0 with exit code $LASTEXITCODE" -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+    } else {
+        # Build for .NET 8 only
+        Write-Host "Building solution..." -ForegroundColor Cyan
+        $buildCommand = "dotnet build --configuration Release"
+        Write-Host "Executing: $buildCommand" -ForegroundColor Gray
+        Invoke-Expression $buildCommand
 
-    # Build the solution
-    Write-Host "Building solution..." -ForegroundColor Cyan
-    $buildCommand = "dotnet build --configuration Release $($properties -join " ")"
-    Write-Host "Executing: $buildCommand" -ForegroundColor Gray
-    Invoke-Expression $buildCommand
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
-        exit $LASTEXITCODE
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
     }
 }
 
@@ -154,14 +180,31 @@ if ($Test) {
             Write-Host "Tests failed for .NET 10.0 with exit code $LASTEXITCODE" -ForegroundColor Red
             exit $LASTEXITCODE
         }
-    } else {
-        # Standard test mode
-        Write-Host "Running tests..." -ForegroundColor Cyan
-        $properties = @()
-        if ($UseNet10) {
-            $properties += "/p:UseNet10=true"
+    } elseif ($UseNet10) {
+        # Run tests for both frameworks
+        Write-Host "Running tests for .NET 8.0..." -ForegroundColor Cyan
+        $testCommand = "dotnet test --no-build --configuration Release"
+        Write-Host "Executing: $testCommand" -ForegroundColor Gray
+        Invoke-Expression $testCommand
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Tests failed for .NET 8.0 with exit code $LASTEXITCODE" -ForegroundColor Red
+            exit $LASTEXITCODE
         }
-        $testCommand = "dotnet test --no-build --configuration Release $($properties -join " ")"
+        
+        Write-Host "Running tests for .NET 10.0..." -ForegroundColor Cyan
+        $testCommand = "dotnet test --no-build --configuration Release /p:UseNet10=true"
+        Write-Host "Executing: $testCommand" -ForegroundColor Gray
+        Invoke-Expression $testCommand
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Tests failed for .NET 10.0 with exit code $LASTEXITCODE" -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+    } else {
+        # Standard test mode (.NET 8 only)
+        Write-Host "Running tests..." -ForegroundColor Cyan
+        $testCommand = "dotnet test --no-build --configuration Release"
         Write-Host "Executing: $testCommand" -ForegroundColor Gray
         Invoke-Expression $testCommand
         
@@ -172,11 +215,67 @@ if ($Test) {
     }
 }
 
+# Push packages to NuGet (GitHub Packages) if PAT provided
+if ($GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
+    Write-Host "====================================================="
+    Write-Host "Pushing packages to NuGet (GitHub Packages)..." -ForegroundColor Cyan
+    
+    # Determine package source directory
+    if ($Publish) {
+        $packageSourceDir = Join-Path $PSScriptRoot "publish"
+    } else {
+        $packageSourceDir = Join-Path $PSScriptRoot "src\Xcaciv.Loader\bin\Release"
+    }
+    
+    $normalizedEndpoint = ($NugetEndpoint -replace '\\', '/')
+    if ($normalizedEndpoint -notmatch '/index\.json$') {
+        $sourceUrl = "$normalizedEndpoint/index.json"
+    } else {
+        $sourceUrl = $normalizedEndpoint
+    }
+    
+    $packagesToPush = Get-ChildItem -Path $packageSourceDir -Filter "*.nupkg" -ErrorAction SilentlyContinue
+    if (-not $packagesToPush) {
+        Write-Host "No .nupkg files found to push in: $packageSourceDir" -ForegroundColor Yellow
+    } else {
+        foreach ($pkg in $packagesToPush) {
+            Write-Host "Pushing: $($pkg.Name)" -ForegroundColor Cyan
+            $pushArgs = @(
+                'nuget','push',
+                $pkg.FullName,
+                '--source',$sourceUrl,
+                '--api-key',$GitHubPat,
+                '--skip-duplicate'
+            )
+            Write-Host "Executing: dotnet $($pushArgs -join ' ')" -ForegroundColor Gray
+            # Execute and capture output to detect specific warnings-as-errors
+            $pushOutput = & dotnet $pushArgs 2>&1
+            # Echo output to console
+            if ($pushOutput) { $pushOutput | ForEach-Object { Write-Host $_ } }
+            
+            if ($LASTEXITCODE -ne 0) {
+                # Ignore NU1510 warnings treated as errors
+                if ($pushOutput -match 'NU1510') {
+                    Write-Host "NuGet push reported NU1510; treating as warning and continuing." -ForegroundColor Yellow
+                    continue
+                }
+                Write-Host "NuGet push failed for $($pkg.Name) with exit code $LASTEXITCODE" -ForegroundColor Red
+                exit $LASTEXITCODE
+            } else {
+                Write-Host "  Pushed: $($pkg.Name)" -ForegroundColor Green
+            }
+        }
+    }
+}
+
 if ($Publish) {
     Write-Host "====================================================="
     Write-Host "Publish completed successfully!" -ForegroundColor Green
     Write-Host "Packages available in: $(Join-Path $PSScriptRoot 'publish')" -ForegroundColor Cyan
+    Write-Host "Local packages copied to: $LocalNugetPath" -ForegroundColor Cyan
     Write-Host "====================================================="
 } else {
+    Write-Host "====================================================="
     Write-Host "Build completed successfully!" -ForegroundColor Green
+    Write-Host "====================================================="
 }
