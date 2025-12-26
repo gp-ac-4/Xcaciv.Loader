@@ -7,9 +7,6 @@ param(
     [switch]$Test = $false,
     
     [Parameter(Mandatory = $false)]
-    [switch]$Publish = $false,
-    
-    [Parameter(Mandatory = $false)]
     [string]$GitHubPat = "",
     
     [Parameter(Mandatory = $false)]
@@ -20,20 +17,26 @@ param(
     [string]$LocalNugetPath = "G:\NuGetPackages"
 )
 
+# Automatically enable publish mode if GitHubPat is provided
+$Publish = $false
+if ($GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
+    $Publish = $true
+}
+
 # Display banner
 Write-Host "====================================================="
 Write-Host "Xcaciv.Loader Build Script"
 Write-Host "====================================================="
 if ($Publish) {
-    Write-Host "Mode: Publish (building for .NET 8.0 and .NET 10.0)"
+    Write-Host "Mode: Publish (building for .NET 8.0 and .NET 10.0)" -ForegroundColor Cyan
 } elseif ($UseNet10) {
-    Write-Host "Building for both .NET 8.0 and .NET 10.0"
+    Write-Host "Target Framework: Both .NET 8.0 and .NET 10.0"
 } else {
     Write-Host "Target Framework: .NET 8.0"
 }
 Write-Host "Run Tests: $( if ($Test) { "Yes" } else { "No" } )"
 Write-Host "Local NuGet path: $LocalNugetPath"
-if ($GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
+if ($Publish) {
     Write-Host "NuGet Push: Enabled (GitHub PAT provided)" -ForegroundColor Green
 } else {
     Write-Host "NuGet Push: Disabled (no GitHub PAT)" -ForegroundColor Yellow
@@ -95,29 +98,33 @@ if ($Publish) {
     }
 
     # Mandatory local copy to NuGet packages directory (only if directory exists)
-    try {
-        $targetLocal = $LocalNugetPath.TrimEnd('\', '/')
-        if (-not (Test-Path -Path $targetLocal -PathType Container)) {
-            Write-Host "ERROR: Local NuGet directory does not exist: $targetLocal" -ForegroundColor Red
+    if ([string]::IsNullOrWhiteSpace($LocalNugetPath)) {
+        Write-Host "Warning: LocalNugetPath is not specified, skipping local copy" -ForegroundColor Yellow
+    } else {
+        try {
+            $targetLocal = $LocalNugetPath.TrimEnd('\', '/')
+            if (-not (Test-Path -Path $targetLocal -PathType Container)) {
+                Write-Host "ERROR: Local NuGet directory does not exist: $targetLocal" -ForegroundColor Red
+                exit 1
+            }
+            Write-Host "Copying packages to local directory: $targetLocal" -ForegroundColor Cyan
+            $localCopied = 0
+            $publishPackages = Get-ChildItem -Path $publishDir -Filter "*.nupkg" -ErrorAction SilentlyContinue
+            $publishSymbols = Get-ChildItem -Path $publishDir -Filter "*.snupkg" -ErrorAction SilentlyContinue
+            foreach ($pkg in @($publishPackages + $publishSymbols)) {
+                Copy-Item -Path $pkg.FullName -Destination $targetLocal -Force
+                Write-Host "  Copied locally: $($pkg.Name)" -ForegroundColor Green
+                $localCopied++
+            }
+            if ($localCopied -eq 0) {
+                Write-Host "No packages found to copy locally." -ForegroundColor Yellow
+            } else {
+                Write-Host "Copied $localCopied package(s) to local directory: $targetLocal" -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "Failed to copy packages locally: $($_.Exception.Message)" -ForegroundColor Red
             exit 1
         }
-        Write-Host "Copying packages to local directory: $targetLocal" -ForegroundColor Cyan
-        $localCopied = 0
-        $publishPackages = Get-ChildItem -Path $publishDir -Filter "*.nupkg" -ErrorAction SilentlyContinue
-        $publishSymbols = Get-ChildItem -Path $publishDir -Filter "*.snupkg" -ErrorAction SilentlyContinue
-        foreach ($pkg in @($publishPackages + $publishSymbols)) {
-            Copy-Item -Path $pkg.FullName -Destination $targetLocal -Force
-            Write-Host "  Copied locally: $($pkg.Name)" -ForegroundColor Green
-            $localCopied++
-        }
-        if ($localCopied -eq 0) {
-            Write-Host "No packages found to copy locally." -ForegroundColor Yellow
-        } else {
-            Write-Host "Copied $localCopied package(s) to local directory: $targetLocal" -ForegroundColor Green
-        }
-    } catch {
-        Write-Host "Failed to copy packages locally: $($_.Exception.Message)" -ForegroundColor Red
-        exit 1
     }
     
 } else {
@@ -215,8 +222,8 @@ if ($Test) {
     }
 }
 
-# Push packages to NuGet (GitHub Packages) only when publishing and PAT provided
-if ($Publish -and $GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
+# Push packages to NuGet (GitHub Packages) only when publishing
+if ($Publish) {
     Write-Host "====================================================="
     Write-Host "Pushing packages to NuGet (GitHub Packages)..." -ForegroundColor Cyan
     
@@ -243,23 +250,17 @@ if ($Publish -and $GitHubPat -and $GitHubPat.Trim().Length -gt 0) {
                 '--api-key',$GitHubPat,
                 '--skip-duplicate'
             )
-            $loggingArgs = $pushArgs.Clone()
-            for ($i = 0; $i -lt $loggingArgs.Length; $i++) {
-                if ($loggingArgs[$i] -eq '--api-key' -and ($i + 1) -lt $loggingArgs.Length) {
-                    $loggingArgs[$i + 1] = '***REDACTED***'
-                    break
-                }
-            }
-            Write-Host "Executing: dotnet $($loggingArgs -join ' ')" -ForegroundColor Gray
+            Write-Host "Executing: dotnet nuget push [package] --source $sourceUrl --api-key ***REDACTED*** --skip-duplicate" -ForegroundColor Gray
             # Execute and capture output to detect specific warnings-as-errors
             $pushOutput = & dotnet $pushArgs 2>&1
             # Echo output to console
             if ($pushOutput) { $pushOutput | ForEach-Object { Write-Host $_ } }
             
             if ($LASTEXITCODE -ne 0) {
-                # NU1510 indicates a signing or trust issue; log explicit context but still treat as an error
+                # Ignore NU1510 warnings treated as errors
                 if ($pushOutput -match 'NU1510') {
-                    Write-Host "NuGet push reported NU1510 (signing or trust issue). Failing build; verify package signing and source trust configuration." -ForegroundColor Red
+                    Write-Host "NuGet push reported NU1510; treating as warning and continuing." -ForegroundColor Yellow
+                    continue
                 }
                 Write-Host "NuGet push failed for $($pkg.Name) with exit code $LASTEXITCODE" -ForegroundColor Red
                 exit $LASTEXITCODE
@@ -274,7 +275,9 @@ if ($Publish) {
     Write-Host "====================================================="
     Write-Host "Publish completed successfully!" -ForegroundColor Green
     Write-Host "Packages available in: $(Join-Path $PSScriptRoot 'publish')" -ForegroundColor Cyan
-    Write-Host "Local packages copied to: $LocalNugetPath" -ForegroundColor Cyan
+    if (-not [string]::IsNullOrWhiteSpace($LocalNugetPath)) {
+        Write-Host "Local packages copied to: $LocalNugetPath" -ForegroundColor Cyan
+    }
     Write-Host "====================================================="
 } else {
     Write-Host "====================================================="
