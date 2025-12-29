@@ -5,7 +5,7 @@
     <TargetFrameworks Condition="'$(UseNet10)' != 'true'">net8.0</TargetFrameworks>
     
     <!-- Version Information -->
-    <Version>2.1.1</Version>
+    <Version>2.1.2</Version>
     <FileVersion>2.1.1.0</FileVersion>
     <AssemblyVersion>2.1.1.0</AssemblyVersion>
     
