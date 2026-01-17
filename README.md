@@ -1,4 +1,6 @@
 # Xcaciv.Loader
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fgp-ac-4%2FXcaciv.Loader.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fgp-ac-4%2FXcaciv.Loader?ref=badge_shield)
+
 
 Sexy simple C# module for runtime loading of types from external assemblies.
 
@@ -27,3 +29,6 @@ See the [Multi-Framework Documentation](docs/multi-framework.md) for details on 
 ## Specification
 
 For detailed specifications, see [the specification document](spec/spec-architecture-dynamic-assembly-loading.md)
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fgp-ac-4%2FXcaciv.Loader.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fgp-ac-4%2FXcaciv.Loader?ref=badge_large)
